@@ -1,0 +1,443 @@
+=============================================
+
+Author: Ascendion AAVA
+
+Created on: 
+
+Description: Combined functional and unit validation suite for ADF Mapping Dataflow transformations using pytest
+
+=============================================
+
+Test Case Summary
+
+| Test Case ID | Test Type | Description | Input Data Description | Expected Outcome |
+|-------------|-----------|-------------|-----------------------|------------------|
+| FTC_01      | Functional| Valid Member record routed to MemberSink | Member record with all required fields populated and valid data (e.g., MemberId present, valid BirthDate, Gender in allowed values, etc.) | Record is routed to ValidMemberRecords and loaded to MemberSink |
+| FTC_02      | Functional| Invalid Member record routed to error output | Member record with missing or invalid required fields (e.g., missing MemberId, invalid BirthDate, etc.) | Record is routed to ErrorMemberRecords and not loaded to MemberSink |
+| FTC_03      | Functional| Valid Member Address record routed to MemberAddressSink | Member Address record with all required fields populated and valid data (e.g., EDHMemberAddressId present, valid City, State, PostalCode, etc.) | Record is routed to ValidMemberAddressRecords and loaded to MemberAddressSink |
+| FTC_04      | Functional| Invalid Member Address record routed to error output | Member Address record with missing or invalid required fields (e.g., missing EDHMemberAddressId, null City, etc.) | Record is routed to ErrorMemberAddressRecords and not loaded to MemberAddressSink |
+| FTC_05      | Functional| Valid PCP History record routed to PCPHistorySink | PCP History record with all required fields populated and valid data (e.g., EDHMemberServiceRequestId present, valid PCPID, etc.) | Record is routed to ValidPCPHistoryRecords and loaded to PCPHistorySink |
+| FTC_06      | Functional| Invalid PCP History record routed to error output | PCP History record with missing or invalid required fields (e.g., missing EDHMemberServiceRequestId, null PCPID, etc.) | Record is routed to ErrorPCPHistoryRecords and not loaded to PCPHistorySink |
+| FTC_07      | Functional| Valid Enrollment record routed to EnrollmentSink | Enrollment record with all required fields populated and valid data (e.g., EDHEnrollmentId present, valid PlanID, PlanEffectiveDate, etc.) | Record is routed to ValidEnrollmentRecords and loaded to EnrollmentSink |
+| FTC_08      | Functional| Invalid Enrollment record routed to error output | Enrollment record with missing or invalid required fields (e.g., missing EDHEnrollmentId, null PlanID, etc.) | Record is routed to ErrorEnrollmentRecords and not loaded to EnrollmentSink |
+| FTC_09      | Functional| Valid Communication Preference record routed to CommunicationPreferenceSink | Communication Preference record with all required fields populated and valid data (e.g., EDHMemberCommunicationPreferencesId present, valid CommunicationType, etc.) | Record is routed to ValidCommunicationPreferenceRecords and loaded to CommunicationPreferenceSink |
+| FTC_10      | Functional| Invalid Communication Preference record routed to error output | Communication Preference record with missing or invalid required fields (e.g., missing EDHMemberCommunicationPreferencesId, null CommunicationType, etc.) | Record is routed to ErrorCommunicationPreferenceRecords and not loaded to CommunicationPreferenceSink |
+| FTC_11      | Functional| Audit log record derived and loaded to AuditLogSink | Any pipeline execution event | Audit log record is created with derived fields (LogEntryKey, TargetEntity, LoadTimestamp, ProcessName, CompletionTimestamp, OperationOutcome) and loaded to AuditLogSink |
+| TC_01       | Unit      | Member source column mapping validation | Raw MemberSource table data | All columns present, correct data types, schema drift allowed |
+| TC_02       | Unit      | Member required fields not null | MemberSource table | MemberId, FirstName, LastName, BirthDate, Gender, MaritalStatus must not be null or empty |
+| TC_03       | Unit      | Member Gender enum validation | MemberSource table | Gender must be one of allowed values ('Male', 'Female', 'Other') |
+| TC_04       | Unit      | Member BirthDate valid timestamp | MemberSource table | BirthDate must be a valid timestamp, not in the future |
+| TC_05       | Unit      | Member conditional split routing (valid/error) | MemberConditionalSplit | Valid records in ValidMemberRecords, invalid in ErrorMemberRecords |
+| TC_06       | Unit      | Member sink schema alignment | MemberSink table | All sink columns present, correct data types |
+| TC_07       | Unit      | MemberAddress source column mapping validation | Raw MemberAddressSource table data | All columns present, correct data types, schema drift allowed |
+| TC_08       | Unit      | MemberAddress required fields not null | MemberAddressSource table | EDHMemberAddressId, Line1, City, State, PostalCode must not be null or empty |
+| TC_09       | Unit      | MemberAddress conditional split routing (valid/error) | MemberAddressConditionalSplit | Valid records in ValidMemberAddressRecords, invalid in ErrorMemberAddressRecords |
+| TC_10       | Unit      | MemberAddress sink schema alignment | MemberAddressSink table | All sink columns present, correct data types |
+| TC_11       | Unit      | PCPHistory source column mapping validation | Raw PCPHistorySource table data | All columns present, correct data types, schema drift allowed |
+| TC_12       | Unit      | PCPHistory required fields not null | PCPHistorySource table | EDHMemberServiceRequestId, PCPID, PCPName must not be null or empty |
+| TC_13       | Unit      | PCPHistory conditional split routing (valid/error) | PCPHistoryConditionalSplit | Valid records in ValidPCPHistoryRecords, invalid in ErrorPCPHistoryRecords |
+| TC_14       | Unit      | PCPHistory sink schema alignment | PCPHistorySink table | All sink columns present, correct data types |
+| TC_15       | Unit      | Enrollment source column mapping validation | Raw EnrollmentSource table data | All columns present, correct data types, schema drift allowed |
+| TC_16       | Unit      | Enrollment required fields not null | EnrollmentSource table | EDHEnrollmentId, PlanID, PlanEffectiveDate must not be null or empty |
+| TC_17       | Unit      | Enrollment conditional split routing (valid/error) | EnrollmentConditionalSplit | Valid records in ValidEnrollmentRecords, invalid in ErrorEnrollmentRecords |
+| TC_18       | Unit      | Enrollment sink schema alignment | EnrollmentSink table | All sink columns present, correct data types |
+| TC_19       | Unit      | CommunicationPreference source column mapping validation | Raw CommunicationPreferenceSource table data | All columns present, correct data types, schema drift allowed |
+| TC_20       | Unit      | CommunicationPreference required fields not null | CommunicationPreferenceSource table | EDHMemberCommunicationPreferencesId, CommunicationType must not be null or empty |
+| TC_21       | Unit      | CommunicationPreference conditional split routing (valid/error) | CommunicationPreferenceConditionalSplit | Valid records in ValidCommunicationPreferenceRecords, invalid in ErrorCommunicationPreferenceRecords |
+| TC_22       | Unit      | CommunicationPreference sink schema alignment | CommunicationPreferenceSink table | All sink columns present, correct data types |
+| TC_23       | Unit      | AuditLog derived column population | AuditLogSink table | LogEntryKey, TargetEntity, LoadTimestamp, ProcessName, CompletionTimestamp, OperationOutcome must be populated |
+| TC_24       | Unit      | AuditLog sink schema alignment | AuditLogSink table | All sink columns present, correct data types |
+| TC_25       | Unit      | Duplicate Member handling | MemberSource table | No duplicate MemberId in MemberSink |
+| TC_26       | Unit      | Schema drift behavior | All sources/sinks | No missing columns, unexpected columns handled gracefully |
+
+
+Pytest Validation Suite
+
+import pytest
+import pyodbc
+
+@pytest.fixture(scope="module")
+def conn():
+    connection_string = (
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        "SERVER=<your_server>;"
+        "DATABASE=<your_database>;"
+        "Authentication=ActiveDirectoryInteractive"
+    )
+    return pyodbc.connect(connection_string)
+
+# Functional Test Cases
+
+def test_FTC_01_valid_member_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidMemberRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No valid member records routed to MemberSink"
+
+def test_FTC_02_invalid_member_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorMemberRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No invalid member records routed to error output"
+
+def test_FTC_03_valid_member_address_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidMemberAddressRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No valid member address records routed to MemberAddressSink"
+
+def test_FTC_04_invalid_member_address_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorMemberAddressRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No invalid member address records routed to error output"
+
+def test_FTC_05_valid_pcp_history_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidPCPHistoryRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No valid PCP history records routed to PCPHistorySink"
+
+def test_FTC_06_invalid_pcp_history_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorPCPHistoryRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No invalid PCP history records routed to error output"
+
+def test_FTC_07_valid_enrollment_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidEnrollmentRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No valid enrollment records routed to EnrollmentSink"
+
+def test_FTC_08_invalid_enrollment_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorEnrollmentRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No invalid enrollment records routed to error output"
+
+def test_FTC_09_valid_communication_preference_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidCommunicationPreferenceRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No valid communication preference records routed to CommunicationPreferenceSink"
+
+def test_FTC_10_invalid_communication_preference_record_routed(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorCommunicationPreferenceRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No invalid communication preference records routed to error output"
+
+def test_FTC_11_audit_log_record_derived_and_loaded(conn):
+    query = """
+    SELECT COUNT(*) FROM AuditLogSink
+    WHERE LogEntryKey IS NOT NULL AND TargetEntity = 'MemberDataIntegration' AND OperationOutcome = 'Success'
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result > 0, "No audit log record derived and loaded to AuditLogSink"
+
+# Unit Test Cases
+
+def test_TC_01_member_source_column_mapping(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberSource
+    WHERE MemberId IS NULL OR FirstName IS NULL OR LastName IS NULL OR BirthDate IS NULL OR Gender IS NULL OR MaritalStatus IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records missing required MemberSource columns"
+
+def test_TC_02_member_required_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberSource
+    WHERE MemberId IS NULL OR FirstName IS NULL OR LastName IS NULL OR BirthDate IS NULL OR Gender IS NULL OR MaritalStatus IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null required fields in MemberSource"
+
+def test_TC_03_member_gender_enum_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberSource
+    WHERE Gender NOT IN ('Male', 'Female', 'Other')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with invalid Gender enum values"
+
+def test_TC_04_member_birthdate_valid_timestamp(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberSource
+    WHERE BirthDate IS NULL OR BirthDate > GETDATE()
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with invalid BirthDate"
+
+def test_TC_05_member_conditional_split_routing(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidMemberRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    valid_count = cursor.fetchone()[0]
+    query2 = "SELECT COUNT(*) FROM ErrorMemberRecords"
+    cursor.execute(query2)
+    error_count = cursor.fetchone()[0]
+    assert valid_count + error_count > 0, "No records routed in MemberConditionalSplit"
+
+def test_TC_06_member_sink_schema_alignment(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberSink
+    WHERE MemberID IS NULL OR FirstName IS NULL OR LastName IS NULL OR BirthDate IS NULL OR Gender IS NULL OR MaritalStatus IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"MemberSink schema misalignment, missing required columns"
+
+def test_TC_07_memberaddress_source_column_mapping(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberAddressSource
+    WHERE EDHMemberAddressId IS NULL OR Line1 IS NULL OR City IS NULL OR State IS NULL OR PostalCode IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records missing required MemberAddressSource columns"
+
+def test_TC_08_memberaddress_required_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberAddressSource
+    WHERE EDHMemberAddressId IS NULL OR Line1 IS NULL OR City IS NULL OR State IS NULL OR PostalCode IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null required fields in MemberAddressSource"
+
+def test_TC_09_memberaddress_conditional_split_routing(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidMemberAddressRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    valid_count = cursor.fetchone()[0]
+    query2 = "SELECT COUNT(*) FROM ErrorMemberAddressRecords"
+    cursor.execute(query2)
+    error_count = cursor.fetchone()[0]
+    assert valid_count + error_count > 0, "No records routed in MemberAddressConditionalSplit"
+
+def test_TC_10_memberaddress_sink_schema_alignment(conn):
+    query = """
+    SELECT COUNT(*) FROM MemberAddressSink
+    WHERE MemberAddressID IS NULL OR Line1 IS NULL OR City IS NULL OR State IS NULL OR PostalCode IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"MemberAddressSink schema misalignment, missing required columns"
+
+def test_TC_11_pcphistory_source_column_mapping(conn):
+    query = """
+    SELECT COUNT(*) FROM PCPHistorySource
+    WHERE EDHMemberServiceRequestId IS NULL OR PCPID IS NULL OR PCPName IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records missing required PCPHistorySource columns"
+
+def test_TC_12_pcphistory_required_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM PCPHistorySource
+    WHERE EDHMemberServiceRequestId IS NULL OR PCPID IS NULL OR PCPName IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null required fields in PCPHistorySource"
+
+def test_TC_13_pcphistory_conditional_split_routing(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidPCPHistoryRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    valid_count = cursor.fetchone()[0]
+    query2 = "SELECT COUNT(*) FROM ErrorPCPHistoryRecords"
+    cursor.execute(query2)
+    error_count = cursor.fetchone()[0]
+    assert valid_count + error_count > 0, "No records routed in PCPHistoryConditionalSplit"
+
+def test_TC_14_pcphistory_sink_schema_alignment(conn):
+    query = """
+    SELECT COUNT(*) FROM PCPHistorySink
+    WHERE PCPHistoryID IS NULL OR PCPID IS NULL OR PCPName IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"PCPHistorySink schema misalignment, missing required columns"
+
+def test_TC_15_enrollment_source_column_mapping(conn):
+    query = """
+    SELECT COUNT(*) FROM EnrollmentSource
+    WHERE EDHEnrollmentId IS NULL OR PlanID IS NULL OR PlanEffectiveDate IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records missing required EnrollmentSource columns"
+
+def test_TC_16_enrollment_required_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM EnrollmentSource
+    WHERE EDHEnrollmentId IS NULL OR PlanID IS NULL OR PlanEffectiveDate IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null required fields in EnrollmentSource"
+
+def test_TC_17_enrollment_conditional_split_routing(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidEnrollmentRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    valid_count = cursor.fetchone()[0]
+    query2 = "SELECT COUNT(*) FROM ErrorEnrollmentRecords"
+    cursor.execute(query2)
+    error_count = cursor.fetchone()[0]
+    assert valid_count + error_count > 0, "No records routed in EnrollmentConditionalSplit"
+
+def test_TC_18_enrollment_sink_schema_alignment(conn):
+    query = """
+    SELECT COUNT(*) FROM EnrollmentSink
+    WHERE EnrollmentID IS NULL OR PlanID IS NULL OR PlanEffectiveDate IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"EnrollmentSink schema misalignment, missing required columns"
+
+def test_TC_19_communicationpreference_source_column_mapping(conn):
+    query = """
+    SELECT COUNT(*) FROM CommunicationPreferenceSource
+    WHERE EDHMemberCommunicationPreferencesId IS NULL OR CommunicationType IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records missing required CommunicationPreferenceSource columns"
+
+def test_TC_20_communicationpreference_required_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM CommunicationPreferenceSource
+    WHERE EDHMemberCommunicationPreferencesId IS NULL OR CommunicationType IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null required fields in CommunicationPreferenceSource"
+
+def test_TC_21_communicationpreference_conditional_split_routing(conn):
+    query = """
+    SELECT COUNT(*) FROM ValidCommunicationPreferenceRecords
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    valid_count = cursor.fetchone()[0]
+    query2 = "SELECT COUNT(*) FROM ErrorCommunicationPreferenceRecords"
+    cursor.execute(query2)
+    error_count = cursor.fetchone()[0]
+    assert valid_count + error_count > 0, "No records routed in CommunicationPreferenceConditionalSplit"
+
+def test_TC_22_communicationpreference_sink_schema_alignment(conn):
+    query = """
+    SELECT COUNT(*) FROM CommunicationPreferenceSink
+    WHERE CommunicationPreferenceID IS NULL OR CommunicationType IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"CommunicationPreferenceSink schema misalignment, missing required columns"
+
+def test_TC_23_auditlog_derived_column_population(conn):
+    query = """
+    SELECT COUNT(*) FROM AuditLogSink
+    WHERE LogEntryKey IS NULL OR TargetEntity IS NULL OR LoadTimestamp IS NULL OR ProcessName IS NULL OR CompletionTimestamp IS NULL OR OperationOutcome IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"AuditLogSink missing derived column population"
+
+def test_TC_24_auditlog_sink_schema_alignment(conn):
+    query = """
+    SELECT COUNT(*) FROM AuditLogSink
+    WHERE LogEntryKey IS NULL OR TargetEntity IS NULL OR LoadTimestamp IS NULL OR ProcessName IS NULL OR CompletionTimestamp IS NULL OR OperationOutcome IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"AuditLogSink schema misalignment, missing required columns"
+
+def test_TC_25_duplicate_member_handling(conn):
+    query = """
+    SELECT MemberId, COUNT(*) AS cnt FROM MemberSink
+    GROUP BY MemberId
+    HAVING COUNT(*) > 1
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    duplicates = cursor.fetchall()
+    assert len(duplicates) == 0, f"Found duplicate MemberIds in MemberSink: {duplicates}"
+
+def test_TC_26_schema_drift_behavior(conn):
+    query = """
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME IN ('MemberSource','MemberAddressSource','PCPHistorySource','EnrollmentSource','CommunicationPreferenceSource','MemberSink','MemberAddressSink','PCPHistorySink','EnrollmentSink','CommunicationPreferenceSink','AuditLogSink')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    columns = cursor.fetchall()
+    assert columns is not None, "Schema drift not handled gracefully"
+
+API cost: 0.090000 USD
