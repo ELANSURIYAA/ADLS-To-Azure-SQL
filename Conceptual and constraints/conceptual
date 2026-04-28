@@ -1,0 +1,126 @@
+1. Domain Overview
+
+The primary business domain is Member Data Migration for Healthcare CRM. The user story focuses on migrating member data from an Enterprise Data Hub (EDH) to Microsoft Dataverse (CRM), ensuring data quality, compliance, and accessibility for service agents. The scope includes member demographics, enrollment (care plans), PCP history, communication preferences, and addresses.
+
+2. List of Entity Names with Descriptions
+
+1. Member (Contact): Represents a healthcare member's core demographic and profile information.
+2. Enrollment (Care Plan): Details about a member's health plan enrollment, including plan status, dates, and care management.
+3. PCP History (Patient General Practitioner): Tracks the member's Primary Care Physician (PCP) assignments and history.
+4. Communication Preference: Captures a member's preferences for communication channels and categories.
+5. Member Address (Customer Address): Stores permanent and mailing addresses for members, including address type and period.
+
+3. List of Attributes for Each Entity with Descriptions
+
+Member (Contact):
+- First Name: Member's given name.
+- Last Name: Member's family name.
+- Member ID: Unique identifier for the member.
+- Date of Birth: Member's birth date.
+- Main Phone: Primary contact number (E.164 format).
+- Other Phone: Secondary contact number.
+- Email: Member's email address (RFC 5322 format).
+- Spoken Language: Language spoken by the member.
+- Written Language: Language preferred for written communication.
+- Gender: Member's gender.
+- Do Not Call: Indicates if the member opts out of calls.
+- Marital Status: Member's marital status.
+- Middle Name: Member's middle name.
+- Source System: Origin of the data (static: EDH).
+
+Enrollment (Care Plan):
+- Plan Title: Name of the health plan.
+- Plan Status: Current status of the plan.
+- Effective End Date: Plan's end date.
+- Plan Start Date: Plan's start date.
+- Plan ID: Identifier for the plan.
+- Patient Identifier: Reference to the member (Contact).
+- Plan Type: Type of health plan (static value).
+- Care Management Program: Name of the care management program.
+- Care Manager Name: Assigned care manager's name.
+- Care Manager Phone: Contact for the care manager.
+- SNP Plan Dx Verification: Special Needs Plan diagnosis verification status.
+- SNP Plan Dx Verif. Due Date: Due date for SNP plan diagnosis verification.
+- SNP Plans: Indicates SNP plan status.
+- OTC Vendor Name: Over-the-counter vendor name.
+- SSBC/I Screening Status Date: Date of SSBC/I screening status.
+- Context Type: Context of the care plan (static value).
+- Plan Description: Description of the plan.
+- Plan Intent: Intent of the plan.
+- Source System: Origin of the data (static: EDH).
+
+PCP History (Patient General Practitioner):
+- PCP Name: Name of the primary care physician.
+- PCP ID: Identifier for the PCP.
+- PMG Phone Number: Phone number for the primary medical group.
+- Effective Date: Start date of PCP assignment.
+- Specialty: PCP's specialty.
+- PCP Address: Address of the PCP.
+- PCP Address Suffix: Additional address information.
+- Auto Assigned: Indicates if PCP was auto-assigned.
+- Current PMG ID: Identifier for the current primary medical group.
+- Current PMG Name: Name of the current primary medical group.
+- End Date: End date of PCP assignment.
+- Patient: Reference to the member (Contact).
+- Source System: Origin of the data (static: EDH).
+
+Communication Preference:
+- Category: Communication category (e.g., SMS, email).
+- Communication Method: Method of communication (e.g., call, text).
+- Is Preferred: Indicates if this is the preferred method.
+- Is Text Opt-In: Indicates if member has opted in for text messages.
+- Member: Reference to the member (Contact).
+- Sub Category: Further classification of communication.
+- Sub Category Code: Code for the sub category.
+- Source System: Origin of the data (static: EDH).
+
+Member Address (Customer Address):
+- Contact: Reference to the member (Contact).
+- Address Type: Type of address (permanent, mailing, etc.).
+- Address Line 1: First line of the address.
+- Address Line 2: Second line of the address.
+- City: City of the address.
+- State/Province: State or province.
+- Postal Code: Postal or ZIP code.
+- County: County of the address.
+- Period Start: Start date for address validity.
+- Period End: End date for address validity.
+- Source System: Origin of the data (static: EDH).
+
+4. KPI List with Formula or Calculation Logic
+
+1. Migration Completeness:
+   - Formula: (Number of migrated member records with all mandatory fields populated) / (Total number of member records in scope)
+2. Data Loss Rate:
+   - Formula: (Number of records lost during migration) / (Total number of records in source)
+3. Duplicate Rate Post-Migration:
+   - Formula: (Number of duplicate Member IDs in CRM) / (Total number of migrated records)
+4. Search Performance:
+   - Formula: Average search response time (seconds) for queries across all member records
+5. Migration SLA Compliance:
+   - Formula: (Actual migration duration in hours) <= (SLA batch window, e.g., 8 hours)
+6. Audit Log Retention Compliance:
+   - Formula: (Number of days audit logs retained) >= (18 months in days)
+7. Validation Pass Rate:
+   - Formula: (Number of records passing all validation rules) / (Total number of migrated records)
+
+5. Conceptual Data Model in Tabular Form
+
+Parent Entity           | Child Entity                | Relationship Key Field      | Relationship Type
+------------------------|-----------------------------|----------------------------|------------------
+Member (Contact)        | Enrollment (Care Plan)      | Patient Identifier         | One-to-Many
+Member (Contact)        | PCP History                 | Patient                    | One-to-Many
+Member (Contact)        | Communication Preference    | Member                     | One-to-Many
+Member (Contact)        | Member Address              | Contact                    | One-to-Many
+
+6. Common Data Elements Across User Stories
+
+- Member ID (used as a reference key in multiple entities)
+- Source System (static value indicating data origin)
+- EDHMemberId (used for linking and as a foreign key)
+- Contact (reference to Member entity)
+- Date fields (e.g., Date of Birth, Plan Start/End Date, Effective/End Date)
+
+7. API Cost Calculation
+
+Cost for this Call: $0.02
