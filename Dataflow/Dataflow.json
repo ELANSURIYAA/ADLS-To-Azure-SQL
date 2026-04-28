@@ -1,0 +1,347 @@
+{
+    "name": "MemberDataIntegrationFlow",
+    "properties": {
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "MemberSource",
+                        "type": "DatasetReference"
+                    },
+                    "name": "MemberSource"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "MemberAddressSource",
+                        "type": "DatasetReference"
+                    },
+                    "name": "MemberAddressSource"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "PCPHistorySource",
+                        "type": "DatasetReference"
+                    },
+                    "name": "PCPHistorySource"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "EnrollmentSource",
+                        "type": "DatasetReference"
+                    },
+                    "name": "EnrollmentSource"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "CommunicationPreferenceSource",
+                        "type": "DatasetReference"
+                    },
+                    "name": "CommunicationPreferenceSource"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "MemberTarget",
+                        "type": "DatasetReference"
+                    },
+                    "name": "MemberSink"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "MemberAddressTarget",
+                        "type": "DatasetReference"
+                    },
+                    "name": "MemberAddressSink"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "PCPHistoryTarget",
+                        "type": "DatasetReference"
+                    },
+                    "name": "PCPHistorySink"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "EnrollmentTarget",
+                        "type": "DatasetReference"
+                    },
+                    "name": "EnrollmentSink"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "CommunicationPreferenceTarget",
+                        "type": "DatasetReference"
+                    },
+                    "name": "CommunicationPreferenceSink"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "AuditLogTarget",
+                        "type": "DatasetReference"
+                    },
+                    "name": "AuditLogSink"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "MemberConditionalSplit"
+                },
+                {
+                    "name": "MemberAddressConditionalSplit"
+                },
+                {
+                    "name": "PCPHistoryConditionalSplit"
+                },
+                {
+                    "name": "EnrollmentConditionalSplit"
+                },
+                {
+                    "name": "CommunicationPreferenceConditionalSplit"
+                },
+                {
+                    "name": "AuditLogDerivedColumns"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "          MemberId as integer,",
+                "          FirstName as string,",
+                "          MiddleName as string,",
+                "          LastName as string,",
+                "          BirthDate as timestamp,",
+                "          Gender as string,",
+                "          MaritalStatus as string,",
+                "          MemberPhone as string,",
+                "          OtherPhone as string,",
+                "          Email as string,",
+                "          SpokenLanguage as string,",
+                "          WrittenLanguage as string,",
+                "          DoNotCall as string,",
+                "          EDHMemberId as integer",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false) ~> MemberSource",
+                "source(output(",
+                "          EDHMemberAddressId as integer,",
+                "          EDHMemberId as integer,",
+                "          Description as string,",
+                "          Line1 as string,",
+                "          Line2 as string,",
+                "          City as string,",
+                "          State as string,",
+                "          PostalCode as string,",
+                "          County as string,",
+                "          PeriodStart as timestamp,",
+                "          PeriodEnd as timestamp",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false) ~> MemberAddressSource",
+                "source(output(",
+                "          EDHMemberServiceRequestId as integer,",
+                "          EDHMemberId as integer,",
+                "          PCPID as string,",
+                "          PCPName as string,",
+                "          Specialty as string,",
+                "          PMG as string,",
+                "          PhoneNumber as string,",
+                "          PCPEffectiveDate as timestamp,",
+                "          PCPEffectiveEndDate as timestamp,",
+                "          PCPAddressLine1 as string,",
+                "          PCPAddressLine2 as string,",
+                "          PCPAddressCity as string,",
+                "          PCPAddressState as string,",
+                "          PCPAddressPostalCode as string,",
+                "          PCPAddressSuffix as string,",
+                "          PCPAutoAssigned as string,",
+                "          CurrentPMGId as string,",
+                "          CurrentNetworkPMG as string",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false) ~> PCPHistorySource",
+                "source(output(",
+                "          EDHEnrollmentId as integer,",
+                "          EDHMemberId as integer,",
+                "          PlanID as string,",
+                "          PlanName as string,",
+                "          PlanStatus as string,",
+                "          PlanEffectiveDate as timestamp,",
+                "          CareManagerProgram as string,",
+                "          CareManagerName as string,",
+                "          CareManagerPhone as string,",
+                "          SNPPlandiagnosisverificationduedate as timestamp,",
+                "          SSBCIScreeningStatusDate as timestamp,",
+                "          PlanStatusConfirmation as string",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false) ~> EnrollmentSource",
+                "source(output(",
+                "          EDHMemberCommunicationPreferencesId as integer,",
+                "          EDHMemberID as integer,",
+                "          CommunicationType as string,",
+                "          CommunicationCategory as string,",
+                "          CommunicationSubCategoryCode as string,",
+                "          DeliveryMethodName as string,",
+                "          Preferred as string,",
+                "          TextOptIn as string",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false) ~> CommunicationPreferenceSource",
+                "MemberSource split(true(),",
+                "     disjoint: undefined) ~> MemberConditionalSplit@(ValidMemberRecords, ErrorMemberRecords)",
+                "MemberAddressSource split(true(),",
+                "     disjoint: undefined) ~> MemberAddressConditionalSplit@(ValidMemberAddressRecords, ErrorMemberAddressRecords)",
+                "PCPHistorySource split(true(),",
+                "     disjoint: undefined) ~> PCPHistoryConditionalSplit@(ValidPCPHistoryRecords, ErrorPCPHistoryRecords)",
+                "EnrollmentSource split(true(),",
+                "     disjoint: undefined) ~> EnrollmentConditionalSplit@(ValidEnrollmentRecords, ErrorEnrollmentRecords)",
+                "CommunicationPreferenceSource split(true(),",
+                "     disjoint: undefined) ~> CommunicationPreferenceConditionalSplit@(ValidCommunicationPreferenceRecords, ErrorCommunicationPreferenceRecords)",
+                " derive(LogEntryKey = concat('LOG_',toString(currentUTC(),'yyyyMMddHHmmss'),'_',toString(rand())),",
+                "          TargetEntity = 'MemberDataIntegration',",
+                "          LoadTimestamp = currentUTC(),",
+                "          ProcessName = 'MemberDataIntegrationFlow',",
+                "          CompletionTimestamp = currentUTC(),",
+                "          OperationOutcome = 'Success') ~> AuditLogDerivedColumns",
+                " sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     input(",
+                "          MemberID as integer,",
+                "          FirstName as string,",
+                "          MiddleName as string,",
+                "          LastName as string,",
+                "          BirthDate as timestamp,",
+                "          Gender as string,",
+                "          MaritalStatus as string,",
+                "          MemberPhone as string,",
+                "          OtherPhone as string,",
+                "          Email as string,",
+                "          SpokenLanguage as string,",
+                "          WrittenLanguage as string,",
+                "          DoNotCall as string,",
+                "          SourceSystem as string",
+                "     ),",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:false,",
+                "     format: 'table',",
+                "     errorHandlingOption: 'stopOnFirstError') ~> MemberSink",
+                " sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     input(",
+                "          MemberAddressID as integer,",
+                "          Description as string,",
+                "          Line1 as string,",
+                "          Line2 as string,",
+                "          City as string,",
+                "          State as string,",
+                "          PostalCode as string,",
+                "          County as string,",
+                "          PeriodStart as timestamp,",
+                "          PeriodEnd as timestamp,",
+                "          SourceSystem as string,",
+                "          MemberID as integer",
+                "     ),",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:false,",
+                "     format: 'table',",
+                "     errorHandlingOption: 'stopOnFirstError') ~> MemberAddressSink",
+                " sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     input(",
+                "          PCPHistoryID as integer,",
+                "          PCPID as string,",
+                "          PCPName as string,",
+                "          Specialty as string,",
+                "          PMG as string,",
+                "          PhoneNumber as string,",
+                "          PCPEffectiveDate as timestamp,",
+                "          PCPEffectiveEndDate as timestamp,",
+                "          PCPAddressLine1 as string,",
+                "          PCPAddressLine2 as string,",
+                "          PCPAddressCity as string,",
+                "          PCPAddressState as string,",
+                "          PCPAddressPostalCode as string,",
+                "          PCPAddressSuffix as string,",
+                "          PCPAutoAssigned as string,",
+                "          CurrentPMGId as string,",
+                "          CurrentNetworkPMG as string,",
+                "          SourceSystem as string,",
+                "          MemberID as integer",
+                "     ),",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:false,",
+                "     format: 'table',",
+                "     errorHandlingOption: 'stopOnFirstError') ~> PCPHistorySink",
+                " sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     input(",
+                "          EnrollmentID as integer,",
+                "          PlanName as string,",
+                "          PlanStatus as string,",
+                "          PlanEffectiveDate as timestamp,",
+                "          CareManagerProgram as string,",
+                "          CareManagerName as string,",
+                "          CareManagerPhone as string,",
+                "          SNPPlandiagnosisverificationduedate as timestamp,",
+                "          SSBCIScreeningStatusDate as timestamp,",
+                "          PlanStatusConfirmation as string,",
+                "          SourceSystem as string,",
+                "          MemberID as integer",
+                "     ),",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:false,",
+                "     format: 'table',",
+                "     errorHandlingOption: 'stopOnFirstError') ~> EnrollmentSink",
+                " sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     input(",
+                "          CommunicationPreferenceID as integer,",
+                "          CommunicationType as string,",
+                "          CommunicationCategory as string,",
+                "          CommunicationSubCategoryCode as string,",
+                "          DeliveryMethodName as string,",
+                "          Preferred as string,",
+                "          TextOptIn as string,",
+                "          SourceSystem as string,",
+                "          MemberID as integer",
+                "     ),",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:false,",
+                "     format: 'table',",
+                "     errorHandlingOption: 'stopOnFirstError') ~> CommunicationPreferenceSink",
+                "AuditLogDerivedColumns sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     input(",
+                "          LogEntryKey as string,",
+                "          TargetEntity as string,",
+                "          LoadTimestamp as timestamp,",
+                "          ProcessName as string,",
+                "          CompletionTimestamp as timestamp,",
+                "          OperationOutcome as string",
+                "     ),",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:false,",
+                "     format: 'table',",
+                "     errorHandlingOption: 'stopOnFirstError') ~> AuditLogSink"
+            ]
+        }
+    }
+}
