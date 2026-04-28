@@ -14,61 +14,69 @@ Azure Dataflow Validation Report
 
 Dataflow Name: Manual_DF_CLIENT_BRONZE_TO_SILVER
 
-Overall Quality Score (%): 97
+Overall Quality Score (%): 91.43
 
 Justification:
-- All logical blocks present and correctly implemented.
-- Robust source schema definition and appropriate use of schema drift.
-- Join, derived columns, and data quality checks are comprehensive and aligned with business logic.
-- Conditional split ensures proper routing of valid and error records.
-- Sink and error handling blocks are well-configured.
-- Minor potential for improvement in error message enrichment and error record schema.
+- All core logical blocks (Source, Join, Derived Columns, Data Quality Checks, Conditional Split, Sink, Error Handling) are present and implemented with strong validation and transformation logic.
+- Data quality validation is comprehensive, covering all key business fields with explicit iif-based rules.
+- The process flow follows the expected pattern and is logically consistent.
+- Minor gaps identified in error sink field mapping and lack of advanced error enrichment.
+- Schema drift is allowed, which is flexible but may allow unexpected fields if not controlled at sink.
+- No major risks of data loss or duplication detected; join logic is clear and appropriate.
 
 2. Logical Block Validation
 
 Logical Block	Status	Observations
-Source	Valid	Two sources defined with explicit schema, allowSchemaDrift:true, validateSchema:false. Data types and fields appropriate. Isolation level and format specified. No issues found.
-Join	Valid	Left join on ClientFullName == SubscriberName. Join type appropriate for use case. No risk of duplication or data loss. MatchType and broadcast settings are sensible.
-Derived Columns	Valid	All mappings and business logic (including status mapping, date, and relationship type) are clear and correct. Expression syntax valid. Business intent well-covered.
-Data Quality Checks	Valid	Comprehensive iif-based validation for all key fields (null, enum, string length, date comparison, status logic). Error message concatenation logic robust. Enum coverage complete.
-Conditional Split	Valid	Split on ValidationErrors length ensures valid/error routing. Disjoint:false is correct for this use case.
-Sink	Valid	Valid sink for both TargetClient and Error, schema aligns with transformations. Insertable:true, deletable:false, updateable:false, upsertable:false. ErrorHandlingOption:stopOnFirstError is appropriate.
-Error Handling	Valid	Error sink configured with meaningful fields (ErrorID, PipelineName, ActivityName, ErrorMessage, ErrorTime, BatchDate, RecordsProcessed). Schema is sufficient for basic error tracking.
+Source	Valid	- Two sources defined with explicit schema, allowSchemaDrift: true, validateSchema: false.
+		- Data types appropriate, schema covers all business fields.
+Join	Valid	- Left join on ClientFullName == SubscriberName, matchType: exact, no ignoreSpaces.
+		- Correct for use case; no risk of data loss as left join preserves CRM clients.
+Derived Columns	Valid	- Comprehensive field mapping; business logic for ClientStatus (Active/Inactive), correct field renaming.
+Data Quality Checks	Valid	- All critical fields validated: presence, enums, date logic, null/blank checks, error concatenation.
+Conditional Split	Valid	- Correctly splits records based on ValidationErrors (valid vs error records).
+Sink	Valid	- Valid sink for both TargetClient and Error; schema defined, all required fields present for TargetClient.
+Error Handling	Partially Valid	- Error sink present, but error schema is generic and not fully enriched with source context (e.g., missing row-level data, original source keys).
 
 3. Process Flow Assessment
 
-Status: Fully Correct
-Observations: Transformation sequence follows best practices: Source → Join → Derived Columns → Data Quality Checks → Conditional Split → Sink. No missing steps, logical consistency maintained throughout.
+Status:
+Fully Correct
+
+Observations:
+- Flow follows: Source → Join → Derived Columns → Data Quality Checks → Conditional Split → Sink.
+- No missing steps, all routing conditions explicit.
+- Valid and error records are properly separated and routed to respective sinks.
 
 4. Business Rule Validation
 
 Fully Covered:
-- ClientName null/blank check
-- IndustrySector enum validation
-- HeadquartersCountry length validation
-- RevenueRange enum validation
-- EmployeeCountRange enum validation
-- RelationshipType enum validation
-- ContractStartDate null check
-- ContractEndDate > ContractStartDate check
-- ClientStatus enum validation
+- ClientName presence
+- IndustrySector enum
+- HeadquartersCountry (2-char code)
+- RevenueRange enum
+- EmployeeCountRange enum
+- RelationshipType enum
+- ContractStartDate presence
+- ContractEndDate > ContractStartDate
+- ClientStatus (Active/Inactive)
+- ValidationErrors concatenation logic
 
 Partially Covered:
-- Error sink schema could be enriched with more context (e.g., source record reference)
+- Error sink does not capture all possible error context (e.g., source record ID, full error details)
 
 Missing / Needs Review:
-- No explicit check for duplicate ClientName or SubscriberName
-- No validation of date formats or timestamp consistency
-- No explicit business confirmation for enum lists (assumed correct)
+- No explicit duplicate detection (not required, but should be confirmed)
+- No advanced error enrichment (e.g., source record lineage)
 
 5. Risks & Issues
 
 | Item | Description | Severity | Type | Recommendation |
-|------|-------------|----------|------|---------------|
-| 1 | Error sink lacks source record reference for traceability | Low | Schema | Add SourceRecordID or CRMClientID to error sink |
-| 2 | No explicit duplicate check for ClientName | Low | Validation | Add duplicate detection logic if required |
-| 3 | No validation for date/timestamp format | Low | Validation | Add date format validation if source variability expected |
+|------|-------------|----------|------|----------------|
+| 1 | Error sink schema is minimal; lacks source record context (e.g., CRMClientID, SubscriptionID) | Medium | Validation | Enrich error sink with more source fields for better traceability |
+| 2 | allowSchemaDrift: true on all blocks | Medium | Schema | Review if schema drift is required at sink; restrict if possible |
+| 3 | validateSchema: false on all blocks | Low | Schema | Consider enabling schema validation at sink for production |
+| 4 | No duplicate record check | Low | Logic | Confirm if deduplication is handled upstream or not required |
 
 6. API Cost
 
-API cost: 0.00012000 USD
+API cost: 0.00018000 USD
