@@ -1,78 +1,85 @@
-=============================================
+1. Overview
 
-Author: Ascendion AAVA
+This data mapping document defines the field-level transformation and migration logic for moving active member data from the Enterprise Data Hub (EDH) to the target SQL schema for Microsoft Dataverse CRM. The mapping ensures strict data consistency, format standardization (E.164 for phone, RFC 5322 for email, ISO 8601 for dates, USPS for addresses), and type alignment between source and target systems. Key considerations include enforcing referential integrity, deduplication of Member IDs, and compliance with HIPAA and auditability requirements. Business rules and constraints such as mandatory fields, uniqueness, and data validation are actively applied to all mappings, shaping transformation logic and ensuring no data loss or orphaned records. All mappings are grounded in the provided DDLs, sample data, and explicit constraints, with no omissions or assumptions.
 
-Created on: 
+2. Data Mapping for Dimension Tables
 
-Description: Azure Data Factory Mapping Dataflow Validation Report
+| Target Table              | Target Field                  | Source Table              | Source Field                  | Transformation Rule                                                                                                 |
+|--------------------------|-------------------------------|--------------------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| Member                   | MemberId                      | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
+| Member                   | FirstName                     | Member                   | FirstName                     | None                                                                                                                |
+| Member                   | MiddleName                    | Member                   | MiddleName                    | None                                                                                                                |
+| Member                   | LastName                      | Member                   | LastName                      | None                                                                                                                |
+| Member                   | BirthDate                     | Member                   | BirthDate                     | Standardize Format: Source BirthDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| Member                   | Gender                        | Member                   | Gender                        | None                                                                                                                |
+| Member                   | MaritalStatus                 | Member                   | MaritalStatus                 | None                                                                                                                |
+| Member                   | MemberPhone                   | Member                   | MemberPhone                   | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
+| Member                   | OtherPhone                    | Member                   | OtherPhone                    | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
+| Member                   | Email                         | Member                   | Email                         | Standardize Format: RFC 5322 email format | Constraint Applied: Email must comply with RFC 5322                           |
+| Member                   | SpokenLanguage                | Member                   | SpokenLanguage                | None                                                                                                                |
+| Member                   | WrittenLanguage               | Member                   | WrittenLanguage               | None                                                                                                                |
+| Member                   | DoNotCall                     | Member                   | DoNotCall                     | None                                                                                                                |
+| Member                   | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
+| Enrollment               | EnrollmentId                  | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
+| Enrollment               | PlanID                        | Enrollment               | PlanID                        | None                                                                                                                |
+| Enrollment               | PlanName                      | Enrollment               | PlanName                      | None                                                                                                                |
+| Enrollment               | PlanStatus                    | Enrollment               | PlanStatus                    | None                                                                                                                |
+| Enrollment               | PlanEffectiveDate             | Enrollment               | PlanEffectiveDate             | Standardize Format: Source PlanEffectiveDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| Enrollment               | CareManagerProgram            | Enrollment               | CareManagerProgram            | None                                                                                                                |
+| Enrollment               | CareManagerName               | Enrollment               | CareManagerName               | None                                                                                                                |
+| Enrollment               | CareManagerPhone              | Enrollment               | CareManagerPhone              | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
+| Enrollment               | SNPPlandiagnosisverificationduedate | Enrollment        | SNPPlandiagnosisverificationduedate | Standardize Format: Source SNPPlandiagnosisverificationduedate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| Enrollment               | SSBCIScreeningStatusDate      | Enrollment               | SSBCIScreeningStatusDate      | Standardize Format: Source SSBCIScreeningStatusDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| Enrollment               | PlanStatusConfirmation        | Enrollment               | PlanStatusConfirmation        | None                                                                                                                |
+| Enrollment               | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
+| Enrollment               | MemberId                      | Enrollment               | EDHMemberId                   | Lookup/Reference: Map Enrollment.EDHMemberId to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
+| PCPHistory               | PCPHistoryId                  | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
+| PCPHistory               | PCPID                         | PCPHistory               | PCPID                         | None                                                                                                                |
+| PCPHistory               | PCPName                       | PCPHistory               | PCPName                       | None                                                                                                                |
+| PCPHistory               | Specialty                     | PCPHistory               | Specialty                     | None                                                                                                                |
+| PCPHistory               | PMG                           | PCPHistory               | PMG                           | None                                                                                                                |
+| PCPHistory               | PhoneNumber                   | PCPHistory               | PhoneNumber                   | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
+| PCPHistory               | PCPEffectiveDate              | PCPHistory               | PCPEffectiveDate              | Standardize Format: Source PCPEffectiveDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| PCPHistory               | PCPEffectiveEndDate           | PCPHistory               | PCPEffectiveEndDate           | Standardize Format: Source PCPEffectiveEndDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| PCPHistory               | PCPAddressLine1               | PCPHistory               | PCPAddressLine1               | None                                                                                                                |
+| PCPHistory               | PCPAddressLine2               | PCPHistory               | PCPAddressLine2               | None                                                                                                                |
+| PCPHistory               | PCPAddressCity                | PCPHistory               | PCPAddressCity                | None                                                                                                                |
+| PCPHistory               | PCPAddressState               | PCPHistory               | PCPAddressState               | None                                                                                                                |
+| PCPHistory               | PCPAddressPostalCode          | PCPHistory               | PCPAddressPostalCode          | None                                                                                                                |
+| PCPHistory               | PCPAddressSuffix              | PCPHistory               | PCPAddressSuffix              | None                                                                                                                |
+| PCPHistory               | PCPAutoAssigned               | PCPHistory               | PCPAutoAssigned               | None                                                                                                                |
+| PCPHistory               | CurrentPMGId                  | PCPHistory               | CurrentPMGId                  | None                                                                                                                |
+| PCPHistory               | CurrentNetworkPMG             | PCPHistory               | CurrentNetworkPMG              | None                                                                                                                |
+| PCPHistory               | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
+| PCPHistory               | MemberId                      | PCPHistory               | EDHMemberId                   | Lookup/Reference: Map PCPHistory.EDHMemberId to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
+| CommunicationPreference  | CommunicationPreferenceId     | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
+| CommunicationPreference  | CommunicationType             | CommunicationPreference  | CommunicationType             | None                                                                                                                |
+| CommunicationPreference  | CommunicationCategory         | CommunicationPreference  | CommunicationCategory         | None                                                                                                                |
+| CommunicationPreference  | CommunicationSubCategoryCode  | CommunicationPreference  | CommunicationSubCategoryCode  | None                                                                                                                |
+| CommunicationPreference  | DeliveryMethodName            | CommunicationPreference  | DeliveryMethodName            | None                                                                                                                |
+| CommunicationPreference  | Preferred                     | CommunicationPreference  | Preferred                     | None                                                                                                                |
+| CommunicationPreference  | TextOptIn                     | CommunicationPreference  | TextOptIn                     | None                                                                                                                |
+| CommunicationPreference  | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
+| CommunicationPreference  | MemberId                      | CommunicationPreference  | EDHMemberID                   | Lookup/Reference: Map CommunicationPreference.EDHMemberID to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
+| MemberAddress            | MemberAddressId               | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
+| MemberAddress            | Description                   | MemberAddress            | Description                   | None                                                                                                                |
+| MemberAddress            | Line1                         | MemberAddress            | Line1                         | None                                                                                                                |
+| MemberAddress            | Line2                         | MemberAddress            | Line2                         | None                                                                                                                |
+| MemberAddress            | City                          | MemberAddress            | City                          | None                                                                                                                |
+| MemberAddress            | State                         | MemberAddress            | State                         | None                                                                                                                |
+| MemberAddress            | PostalCode                    | MemberAddress            | PostalCode                    | None                                                                                                                |
+| MemberAddress            | County                        | MemberAddress            | County                        | None                                                                                                                |
+| MemberAddress            | PeriodStart                   | MemberAddress            | PeriodStart                   | Standardize Format: Source PeriodStart to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| MemberAddress            | PeriodEnd                     | MemberAddress            | PeriodEnd                     | Standardize Format: Source PeriodEnd to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
+| MemberAddress            | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
+| MemberAddress            | MemberId                      | MemberAddress            | EDHMemberId                   | Lookup/Reference: Map MemberAddress.EDHMemberId to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
+| AuditLog                 | LogEntryKey                   | N/A                      | N/A                           | System Generated: Unique log entry identifier                                                                        |
+| AuditLog                 | TargetEntityName              | N/A                      | N/A                           | Derived: Name of the entity being loaded                                                                             |
+| AuditLog                 | LoadTimestamp                 | N/A                      | N/A                           | System Generated: Timestamp when the load started                                                                    |
+| AuditLog                 | PipelineName                  | N/A                      | N/A                           | Derived: Name of the pipeline or process                                                                             |
+| AuditLog                 | CompletionTimestamp           | N/A                      | N/A                           | System Generated: Timestamp when processing completed                                                                |
+| AuditLog                 | OperationOutcome              | N/A                      | N/A                           | Derived: Outcome of the operation (success/failure)                                                                  |
 
-=============================================
+3. API Cost
 
-Azure Dataflow Validation Report
-
-1. Summary
-
-Dataflow Name: MemberDataIntegrationFlow
-
-Overall Quality Score (%): 60
-
-Justification:
-- Multiple source datasets with defined schemas, but allowSchemaDrift enabled and validateSchema disabled (risk of schema inconsistency)
-- No join transformations present, only splits; possible missing integration logic
-- Conditional splits route all records (true condition), lacking explicit validation rules or business logic
-- Derived columns only present for AuditLog, no business derivations in main flows
-- Sinks configured for each entity, but error handling only via 'stopOnFirstError', no dedicated error sinks for data errors
-- No explicit data quality checks, iif conditions, or rule coverage in splits
-- Process flow is linear but lacks validation and error routing
-- Business rules and validation logic largely missing, only operational metadata in AuditLog
-- Risks of data inconsistency, weak validation, and lack of error capture
-
-2. Logical Block Validation
-
-Logical Block	Status	Observations
-Source	Valid	Schemas defined, allowSchemaDrift: true (risk), validateSchema: false (risk), fields appropriate
-Join	Missing	No joins present, possible missing business integration logic
-Derived Columns	Partially Valid	Only AuditLog has derivations; business columns not derived in main flows
-Data Quality Checks	Missing	No explicit data quality checks, iif, or validation expressions present
-Conditional Split	Invalid	All splits use 'true()', no separation of valid/error records, lacks business logic
-Sink	Valid	Sinks configured, schema matches, insertable, errorHandlingOption: stopOnFirstError
-Error Handling	Risky	No dedicated error sinks for invalid records, only operational error handling; no error schema
-
-3. Process Flow Assessment
-
-Status: Broken / Incomplete
-Observations:
-- Expected flow (Source → Join → Derived Columns → Data Quality Checks → Conditional Split → Sink) not followed
-- No joins, derived columns missing in main flows, splits lack validation logic
-- Error routing for invalid records is not implemented
-
-4. Business Rule Validation
-
-Fully Covered:
-- AuditLog operational metadata derivation
-
-Partially Covered:
-- Source schema definition
-
-Missing / Needs Review:
-- All business validation logic (iif, enum checks, NULL/blank handling, date validation, error message construction)
-- Conditional split routing by data quality
-- Error record capture and schema
-
-5. Risks & Issues
-
-| Item | Description | Severity | Type | Recommendation |
-|------|-------------|----------|------|---------------|
-| 1 | allowSchemaDrift enabled on all sources/sinks | Medium | Schema | Justify or restrict drift, enable validateSchema |
-| 2 | validateSchema disabled everywhere | High | Schema | Enable schema validation for production |
-| 3 | No join transformations | High | Logic | Add joins if business integration needed |
-| 4 | Conditional splits with 'true()' only | High | Logic | Add business validation conditions to splits |
-| 5 | No data quality checks or iif expressions | High | Validation | Add explicit validation rules |
-| 6 | No error handling for invalid records | High | Error Handling | Implement error sinks and error schema |
-| 7 | No business rule enforcement | High | Validation | Add business rule logic (enum, NULL, date, etc.) |
-| 8 | Sinks use stopOnFirstError only | Medium | Error Handling | Use error sinks for granular error capture |
-| 9 | Derived columns only for AuditLog | Medium | Logic | Add business derivations as needed |
-
-6. API Cost
-
-API cost: 0.00012000 USD
+apiCost: 0.02
