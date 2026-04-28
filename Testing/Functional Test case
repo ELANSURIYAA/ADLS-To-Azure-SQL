@@ -1,0 +1,118 @@
+=============================================
+
+Author: Ascendion AAVA
+
+Created on: 
+
+Description: Business-focused functional validation of Azure Data Factory Mapping Dataflow
+
+=============================================
+
+1. Business Understanding
+
+Business Domain:
+Healthcare Data Integration
+
+Business Entities:
+- Member
+- Member Address
+- PCP (Primary Care Provider) History
+- Enrollment
+- Communication Preference
+- Audit Log
+
+Business Objective of the Pipeline:
+To ingest, validate, enrich, and load member-related data (including addresses, PCP history, enrollment, and communication preferences) into target data stores, while maintaining audit logs for traceability and compliance.
+
+Key Business Transformations:
+- Rule-based Filtering: ConditionalSplit transformations route records into valid and error streams for all entities (Member, Member Address, PCP History, Enrollment, Communication Preference).
+- Derived Fields: Audit log records derive fields such as LogEntryKey, TargetEntity, LoadTimestamp, ProcessName, CompletionTimestamp, and OperationOutcome.
+- Data Quality/Validation: Implicitly enforced by splitting records into valid and error streams, ensuring only qualified records reach target tables.
+
+2. Functional Test Case Summary
+
+| Test Case ID | Description |
+|--------------|-------------|
+| FTC_01       | Valid Member record routed to MemberSink |
+| FTC_02       | Invalid Member record routed to error output |
+| FTC_03       | Valid Member Address record routed to MemberAddressSink |
+| FTC_04       | Invalid Member Address record routed to error output |
+| FTC_05       | Valid PCP History record routed to PCPHistorySink |
+| FTC_06       | Invalid PCP History record routed to error output |
+| FTC_07       | Valid Enrollment record routed to EnrollmentSink |
+| FTC_08       | Invalid Enrollment record routed to error output |
+| FTC_09       | Valid Communication Preference record routed to CommunicationPreferenceSink |
+| FTC_10       | Invalid Communication Preference record routed to error output |
+| FTC_11       | Audit log record derived and loaded to AuditLogSink |
+
+3. Detailed Functional Test Cases
+
+Test Case ID: FTC_01
+Title: Valid Member record routing
+Business Scenario: A complete and correct member record is processed.
+Input Condition: Member record with all required fields populated and valid data (e.g., MemberId present, valid BirthDate, Gender in allowed values, etc.).
+Expected Behavior: Record is routed to ValidMemberRecords and loaded to MemberSink.
+
+Test Case ID: FTC_02
+Title: Invalid Member record routing
+Business Scenario: An incomplete or invalid member record is processed.
+Input Condition: Member record with missing or invalid required fields (e.g., missing MemberId, invalid BirthDate, etc.).
+Expected Behavior: Record is routed to ErrorMemberRecords and not loaded to MemberSink.
+
+Test Case ID: FTC_03
+Title: Valid Member Address record routing
+Business Scenario: A complete and correct member address record is processed.
+Input Condition: Member Address record with all required fields populated and valid data (e.g., EDHMemberAddressId present, valid City, State, PostalCode, etc.).
+Expected Behavior: Record is routed to ValidMemberAddressRecords and loaded to MemberAddressSink.
+
+Test Case ID: FTC_04
+Title: Invalid Member Address record routing
+Business Scenario: An incomplete or invalid member address record is processed.
+Input Condition: Member Address record with missing or invalid required fields (e.g., missing EDHMemberAddressId, null City, etc.).
+Expected Behavior: Record is routed to ErrorMemberAddressRecords and not loaded to MemberAddressSink.
+
+Test Case ID: FTC_05
+Title: Valid PCP History record routing
+Business Scenario: A complete and correct PCP history record is processed.
+Input Condition: PCP History record with all required fields populated and valid data (e.g., EDHMemberServiceRequestId present, valid PCPID, etc.).
+Expected Behavior: Record is routed to ValidPCPHistoryRecords and loaded to PCPHistorySink.
+
+Test Case ID: FTC_06
+Title: Invalid PCP History record routing
+Business Scenario: An incomplete or invalid PCP history record is processed.
+Input Condition: PCP History record with missing or invalid required fields (e.g., missing EDHMemberServiceRequestId, null PCPID, etc.).
+Expected Behavior: Record is routed to ErrorPCPHistoryRecords and not loaded to PCPHistorySink.
+
+Test Case ID: FTC_07
+Title: Valid Enrollment record routing
+Business Scenario: A complete and correct enrollment record is processed.
+Input Condition: Enrollment record with all required fields populated and valid data (e.g., EDHEnrollmentId present, valid PlanID, PlanEffectiveDate, etc.).
+Expected Behavior: Record is routed to ValidEnrollmentRecords and loaded to EnrollmentSink.
+
+Test Case ID: FTC_08
+Title: Invalid Enrollment record routing
+Business Scenario: An incomplete or invalid enrollment record is processed.
+Input Condition: Enrollment record with missing or invalid required fields (e.g., missing EDHEnrollmentId, null PlanID, etc.).
+Expected Behavior: Record is routed to ErrorEnrollmentRecords and not loaded to EnrollmentSink.
+
+Test Case ID: FTC_09
+Title: Valid Communication Preference record routing
+Business Scenario: A complete and correct communication preference record is processed.
+Input Condition: Communication Preference record with all required fields populated and valid data (e.g., EDHMemberCommunicationPreferencesId present, valid CommunicationType, etc.).
+Expected Behavior: Record is routed to ValidCommunicationPreferenceRecords and loaded to CommunicationPreferenceSink.
+
+Test Case ID: FTC_10
+Title: Invalid Communication Preference record routing
+Business Scenario: An incomplete or invalid communication preference record is processed.
+Input Condition: Communication Preference record with missing or invalid required fields (e.g., missing EDHMemberCommunicationPreferencesId, null CommunicationType, etc.).
+Expected Behavior: Record is routed to ErrorCommunicationPreferenceRecords and not loaded to CommunicationPreferenceSink.
+
+Test Case ID: FTC_11
+Title: Audit log record derivation and loading
+Business Scenario: Audit log is generated for each pipeline execution.
+Input Condition: Any pipeline execution event.
+Expected Behavior: Audit log record is created with derived fields (LogEntryKey, TargetEntity, LoadTimestamp, ProcessName, CompletionTimestamp, OperationOutcome) and loaded to AuditLogSink.
+
+4. API Cost
+
+API cost for this call: 0.0450 USD
