@@ -1,141 +1,116 @@
-## SECTION 1 — PII Classification
+=============================================
 
-Column NameReason for PII Classification
-FirstNameMember’s given name uniquely identifies the individual.
-MiddleNameMember’s middle name contributes to personal identification.
-LastNameMember’s family name uniquely identifies the individual.
-BirthDateMember’s birth date is uniquely identifying information.
-MemberPhonePrimary phone number can directly identify the individual.
-OtherPhoneSecondary phone number can directly identify the individual.
-EmailEmail address can directly identify the individual.
-Address Line1First line of address can directly identify the individual.
-Address Line2Second line of address can directly identify the individual.
-CityCity, when combined with other address elements, can identify the individual.
-StateState, when combined with other address elements, can identify the individual.
-PostalCodePostal code, when combined with other address elements, can identify the individual.
-CountyCounty, when combined with other address elements, can identify the individual.
-CareManagerPhoneCare manager’s phone number may be considered PII if it relates to member contact.
-PCPNamePrimary care physician name may be considered PII if it relates to member contact.
-PCPIDPrimary care physician identifier may be considered PII if it relates to member contact.
-PhoneNumberPhone number for medical group may be considered PII if it relates to member contact.
-PCPAddressLine1First line of PCP address can directly identify the individual.
-PCPAddressLine2Second line of PCP address can directly identify the individual.
-PCPAddressCityCity of PCP address can directly identify the individual.
-PCPAddressStateState of PCP address can directly identify the individual.
-PCPAddressPostalCodePostal code of PCP address can directly identify the individual.
+Author: Ascendion AAVA
 
-## SECTION 2 — Logical Data Model
+Created on: 
 
-### Core Entities
+Description: Business-focused functional validation of Azure Data Factory Mapping Dataflow
 
-Member
-Classification: Required
-Description: Stores demographic and contact information for healthcare members.
+=============================================
 
-Column NameData TypePIIDescription
-FirstNameVARCHAR(100)YesMember’s given name.
-MiddleNameVARCHAR(100)YesMember’s middle name.
-LastNameVARCHAR(100)YesMember’s family name.
-BirthDateTIMESTAMPYesMember’s birth date.
-GenderVARCHAR(50)NoMember’s gender.
-MaritalStatusVARCHAR(50)NoMember’s marital status.
-MemberPhoneVARCHAR(20)YesPrimary phone number for member contact.
-OtherPhoneVARCHAR(20)YesSecondary phone number for member contact.
-EmailVARCHAR(100)YesMember’s email address.
-SpokenLanguageVARCHAR(50)NoLanguage the member prefers to speak.
-WrittenLanguageVARCHAR(50)NoLanguage the member prefers for written communication.
-DoNotCallVARCHAR(10)NoIndicates if member has opted out of phone contact.
-SourceSystemVARCHAR(50)NoIndicates the origin of the data (EDH).
+1. Business Understanding
 
-MemberAddress
-Classification: Required
-Description: Stores permanent and mailing address records for each member.
+Business Domain:
+Healthcare Member Data Integration
 
-Column NameData TypePIIDescription
-DescriptionVARCHAR(100)NoDescription of the address record.
-Line1VARCHAR(100)YesFirst line of the address.
-Line2VARCHAR(100)YesSecond line of the address.
-CityVARCHAR(50)YesCity of the address.
-StateVARCHAR(50)YesState or province of the address.
-PostalCodeVARCHAR(20)YesPostal code of the address.
-CountyVARCHAR(50)YesCounty of the address.
-PeriodStartTIMESTAMPNoStart date for address validity.
-PeriodEndTIMESTAMPNoEnd date for address validity.
-SourceSystemVARCHAR(50)NoIndicates the origin of the data (EDH).
+Business Entities:
+Member, Enrollment, PCPHistory, CommunicationPreference, MemberAddress, AuditLog
 
-Enrollment
-Classification: Required
-Description: Stores health plan enrollment details for members.
+Business Objective of the Pipeline:
+To ingest, validate, transform, and route member-related data from the EDH source systems to target Dataverse CRM tables, ensuring strict data quality, format standardization, referential integrity, and auditability for downstream business processes and compliance.
 
-Column NameData TypePIIDescription
-PlanIDVARCHAR(50)NoUnique identifier for the plan.
-PlanNameVARCHAR(100)NoName of the health plan.
-PlanStatusVARCHAR(50)NoCurrent status of the plan.
-PlanEffectiveDateTIMESTAMPNoDate when the plan starts.
-CareManagerProgramVARCHAR(100)NoName of the care management program.
-CareManagerNameVARCHAR(100)NoName of the assigned care manager.
-CareManagerPhoneVARCHAR(20)YesPhone number of the care manager.
-SNPPlandiagnosisverificationduedateTIMESTAMPNoDue date for SNP plan diagnosis verification.
-SSBCIScreeningStatusDateTIMESTAMPNoDate of SSBC/I screening status.
-PlanStatusConfirmationVARCHAR(50)NoConfirmation status for the plan.
-SourceSystemVARCHAR(50)NoIndicates the origin of the data (EDH).
+Key Business Transformations:
+- Field derivations and format standardization (ISO 8601 dates, E.164 phone, RFC 5322 email, USPS addresses)
+- Mandatory field validation and error routing
+- Conditional splits for valid/error records
+- Default value assignment (SourceSystem)
+- Audit log generation
+- Referential integrity enforcement (MemberID foreign key)
 
-PCPHistory
-Classification: Required
-Description: Tracks the history of primary care physicians and medical groups associated with a member.
+2. Functional Test Case Summary
 
-Column NameData TypePIIDescription
-PCPIDVARCHAR(50)YesIdentifier for the PCP.
-PCPNameVARCHAR(100)YesName of the primary care physician.
-SpecialtyVARCHAR(50)NoMedical specialty of the PCP.
-PMGVARCHAR(100)NoName of the primary medical group.
-PhoneNumberVARCHAR(20)YesPhone number for the primary medical group.
-PCPEffectiveDateTIMESTAMPNoStart date of PCP assignment.
-PCPEffectiveEndDateTIMESTAMPNoEnd date of PCP assignment.
-PCPAddressLine1VARCHAR(100)YesFirst line of PCP address.
-PCPAddressLine2VARCHAR(100)YesSecond line of PCP address.
-PCPAddressCityVARCHAR(50)YesCity of PCP address.
-PCPAddressStateVARCHAR(50)YesState of PCP address.
-PCPAddressPostalCodeVARCHAR(20)YesPostal code of PCP address.
-PCPAddressSuffixVARCHAR(50)NoAdditional address information.
-PCPAutoAssignedVARCHAR(10)NoIndicates if PCP was auto-assigned.
-CurrentPMGIdVARCHAR(50)NoIdentifier for the current primary medical group.
-CurrentNetworkPMGVARCHAR(100)NoName of the current primary medical group.
-SourceSystemVARCHAR(50)NoIndicates the origin of the data (EDH).
+| Test Case ID | Description |
+|--------------|-------------|
+| FTC_01       | Validation of mandatory Member fields and routing of invalid records |
+| FTC_02       | Standardization and validation of Member phone numbers (E.164) |
+| FTC_03       | Standardization and validation of Member email (RFC 5322) |
+| FTC_04       | Validation of mandatory Enrollment fields and routing of invalid records |
+| FTC_05       | Standardization and validation of CareManagerPhone (E.164) |
+| FTC_06       | Validation of mandatory PCPHistory fields and phone format |
+| FTC_07       | Validation of mandatory CommunicationPreference fields |
+| FTC_08       | Validation of mandatory MemberAddress fields and postal code format |
+| FTC_09       | Routing of valid records to target tables, invalid to error log |
+| FTC_10       | Audit log record generation for valid Member loads |
+| FTC_11       | Referential integrity enforcement between entities (MemberID)
 
-CommunicationPreference
-Classification: Required
-Description: Stores member preferences for communication methods and categories.
+3. Detailed Functional Test Cases
 
-Column NameData TypePIIDescription
-CommunicationTypeVARCHAR(50)NoPreferred method of communication.
-CommunicationCategoryVARCHAR(50)NoCommunication category.
-CommunicationSubCategoryCodeVARCHAR(50)NoCode for communication subcategory.
-DeliveryMethodNameVARCHAR(50)NoName of the delivery method.
-PreferredVARCHAR(10)NoIndicates if this is the preferred method.
-TextOptInVARCHAR(10)NoIndicates if member has opted in for text communication.
-SourceSystemVARCHAR(50)NoIndicates the origin of the data (EDH).
+Test Case ID: FTC_01
+Title: Validation of mandatory Member fields and routing of invalid records
+Business Scenario: Member records must have FirstName, LastName, and BirthDate populated and non-empty to be considered valid.
+Input Condition: SourceMember record with FirstName, LastName, or BirthDate missing or blank.
+Expected Behavior: Record is flagged with validation errors and routed to ErrorRecords sink. Only records with all mandatory fields populated proceed to ValidMemberRecords.
 
-[ASSUMPTION: All columns named EDHMemberId, MemberId, and other _id fields are excluded per instructions.]
+Test Case ID: FTC_02
+Title: Standardization and validation of Member phone numbers (E.164)
+Business Scenario: MemberPhone and OtherPhone must be standardized and validated to E.164 format for downstream processing.
+Input Condition: SourceMember record with MemberPhone or OtherPhone present but not in E.164 format (e.g., missing +country code, extra characters).
+Expected Behavior: Validation error is generated; record is routed to ErrorRecords. Valid E.164 phone numbers are retained and standardized in ValidMemberRecords.
 
-### Aggregated Entities
+Test Case ID: FTC_03
+Title: Standardization and validation of Member email (RFC 5322)
+Business Scenario: Email addresses must be standardized and validated to RFC 5322 format.
+Input Condition: SourceMember record with Email present but not matching RFC 5322 pattern (e.g., missing @, invalid domain).
+Expected Behavior: Validation error is generated; record is routed to ErrorRecords. Valid emails are standardized and retained in ValidMemberRecords.
 
-No aggregated entities are required. The conceptual model contains no explicit requirement for summarised or rolled-up data.
+Test Case ID: FTC_04
+Title: Validation of mandatory Enrollment fields and routing of invalid records
+Business Scenario: Enrollment records require PlanName, PlanStatus, and MemberID to be populated and non-empty.
+Input Condition: SourceEnrollment record with PlanName, PlanStatus, or MemberID missing or blank.
+Expected Behavior: Record is flagged with validation errors and routed to ErrorRecords sink. Only records with all mandatory fields populated proceed to ValidEnrollmentRecords.
 
-## SECTION 3 — Audit Entity Design
+Test Case ID: FTC_05
+Title: Standardization and validation of CareManagerPhone (E.164)
+Business Scenario: CareManagerPhone must be standardized and validated to E.164 format.
+Input Condition: SourceEnrollment record with CareManagerPhone present but not in E.164 format.
+Expected Behavior: Validation error is generated; record is routed to ErrorRecords. Valid E.164 phone numbers are retained and standardized in ValidEnrollmentRecords.
 
-AuditLog
-Classification: Required
-Description: Stores audit log entries for pipeline operation tracking.
+Test Case ID: FTC_06
+Title: Validation of mandatory PCPHistory fields and phone format
+Business Scenario: PCPHistory records require MemberID to be populated and PhoneNumber to be E.164 format if present.
+Input Condition: SourcePCPHistory record with MemberID missing or PhoneNumber not in E.164 format.
+Expected Behavior: Validation error is generated; record is routed to ErrorRecords. Valid records are retained in ValidPCPHistoryRecords.
 
-Column NameData TypePIIDescription
-LogEntryKeyVARCHAR(50)NoUnique log entry identifier.
-TargetEntityNameVARCHAR(100)NoName of the entity being loaded.
-LoadTimestampTIMESTAMPNoTimestamp when the load started.
-PipelineNameVARCHAR(100)NoName of the pipeline or process.
-CompletionTimestampTIMESTAMPNoTimestamp when processing completed.
-OperationOutcomeVARCHAR(50)NoOutcome of the operation (success/failure).
+Test Case ID: FTC_07
+Title: Validation of mandatory CommunicationPreference fields
+Business Scenario: CommunicationPreference records require MemberID and CommunicationType to be populated and non-empty.
+Input Condition: SourceCommunicationPreference record with MemberID or CommunicationType missing or blank.
+Expected Behavior: Validation error is generated; record is routed to ErrorRecords. Valid records are retained in ValidCommunicationPreferenceRecords.
 
-## SECTION 4 — API Cost
+Test Case ID: FTC_08
+Title: Validation of mandatory MemberAddress fields and postal code format
+Business Scenario: MemberAddress records require MemberID, Line1, City, State, and PostalCode to be populated and PostalCode to match USPS format.
+Input Condition: SourceMemberAddress record with any mandatory field missing or PostalCode not matching USPS 5-digit or 9-digit format.
+Expected Behavior: Validation error is generated; record is routed to ErrorRecords. Valid records are retained in ValidMemberAddressRecords.
 
-apiCost: $0.02
+Test Case ID: FTC_09
+Title: Routing of valid records to target tables, invalid to error log
+Business Scenario: All entities must route valid records to their respective target tables and invalid records to the centralized error log.
+Input Condition: Any source record for Member, Enrollment, PCPHistory, CommunicationPreference, or MemberAddress with or without validation errors.
+Expected Behavior: Valid records are written to target tables (SinkMember, SinkEnrollment, etc.). Records with validation errors are written to SinkErrorRecords.
+
+Test Case ID: FTC_10
+Title: Audit log record generation for valid Member loads
+Business Scenario: For every valid Member load, an audit log entry must be generated capturing process, entity, timestamps, and outcome.
+Input Condition: Successful processing of ValidMemberRecords.
+Expected Behavior: An AuditLogRecords entry is generated for each valid Member record loaded, capturing LogEntryKey, TargetEntity, timestamps, and outcome.
+
+Test Case ID: FTC_11
+Title: Referential integrity enforcement between entities (MemberID)
+Business Scenario: Enrollment, PCPHistory, CommunicationPreference, and MemberAddress records must reference valid MemberID values present in the Member entity.
+Input Condition: Source records with MemberID values not present in Member records.
+Expected Behavior: Referential integrity is enforced; records with invalid MemberID are flagged and routed to ErrorRecords. Only records with valid MemberID references are loaded to target tables.
+
+4. API Cost
+
+API cost for this call: 0.02 USD
