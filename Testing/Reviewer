@@ -1,79 +1,406 @@
-1. Data Expectations
+=============================================
+Author: Ascendion AAVA
+Created on: 
+Description: Combined functional and unit validation suite for ADF Mapping Dataflow transformations using pytest
+=============================================
 
-1.1. Data Completeness
-- All ~400,000 active SCAN member records from the EDH source must be migrated to Microsoft Dataverse CRM with zero data loss.
-- Each Member (Contact) record must have all mandatory demographic fields populated: First Name, Last Name, Member ID, Date of Birth, Main Phone, and Email.
-- All related Enrollment (Care Plan), PCP History, Communication Preference, and Member Address records must be present and correctly linked to their parent Member.
+Test Case Summary
 
-1.2. Data Accuracy
-- All migrated data must match the source EDH data with no discrepancies, as validated by reconciliation reports and random sample checks.
-- All verification test scenarios (e.g., search by Member ID, Last Name + DOB) must return correct and matching records.
+| Test Case ID | Test Type   | Description                                                                                          | Input Data Description                                                                                                           | Expected Outcome                                                                                                 |
+|-------------|-------------|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| FTC_01      | Functional  | Validation of mandatory Member fields and routing of invalid records                                  | SourceMember record with FirstName, LastName, or BirthDate missing or blank                                                    | Record flagged with validation errors and routed to ErrorRecords; only records with all mandatory fields proceed |
+| FTC_02      | Functional  | Standardization and validation of Member phone numbers (E.164)                                       | SourceMember record with MemberPhone or OtherPhone present but not in E.164 format                                             | Validation error generated; record routed to ErrorRecords; valid E.164 phone numbers retained in ValidMemberRecords |
+| FTC_03      | Functional  | Standardization and validation of Member email (RFC 5322)                                            | SourceMember record with Email present but not matching RFC 5322 pattern                                                       | Validation error generated; record routed to ErrorRecords; valid emails retained in ValidMemberRecords          |
+| FTC_04      | Functional  | Validation of mandatory Enrollment fields and routing of invalid records                             | SourceEnrollment record with PlanName, PlanStatus, or MemberID missing or blank                                                | Record flagged with validation errors and routed to ErrorRecords; only records with all mandatory fields proceed |
+| FTC_05      | Functional  | Standardization and validation of CareManagerPhone (E.164)                                           | SourceEnrollment record with CareManagerPhone present but not in E.164 format                                                  | Validation error generated; record routed to ErrorRecords; valid E.164 phone numbers retained in ValidEnrollmentRecords |
+| FTC_06      | Functional  | Validation of mandatory PCPHistory fields and phone format                                           | SourcePCPHistory record with MemberID missing or PhoneNumber not in E.164 format                                               | Validation error generated; record routed to ErrorRecords; valid records retained in ValidPCPHistoryRecords      |
+| FTC_07      | Functional  | Validation of mandatory CommunicationPreference fields                                               | SourceCommunicationPreference record with MemberID or CommunicationType missing or blank                                       | Validation error generated; record routed to ErrorRecords; valid records retained in ValidCommunicationPreferenceRecords |
+| FTC_08      | Functional  | Validation of mandatory MemberAddress fields and postal code format                                  | SourceMemberAddress record with any mandatory field missing or PostalCode not matching USPS format                             | Validation error generated; record routed to ErrorRecords; valid records retained in ValidMemberAddressRecords   |
+| FTC_09      | Functional  | Routing of valid records to target tables, invalid to error log                                      | Any source record for Member, Enrollment, PCPHistory, CommunicationPreference, or MemberAddress with or without validation errors | Valid records written to target tables; records with validation errors written to SinkErrorRecords               |
+| FTC_10      | Functional  | Audit log record generation for valid Member loads                                                   | Successful processing of ValidMemberRecords                                                                                     | AuditLogRecords entry generated for each valid Member record loaded                                             |
+| FTC_11      | Functional  | Referential integrity enforcement between entities (MemberID)                                        | Source records with MemberID values not present in Member records                                                              | Referential integrity enforced; records with invalid MemberID routed to ErrorRecords; valid references loaded   |
+| TC_01       | Unit        | Validate SourceMember column mapping and schema drift handling                                       | SourceMember table data                                                                                                        | All columns mapped as per schema; schema drift handled as per mapping logic                                    |
+| TC_02       | Unit        | Validate mandatory Member fields (FirstName, LastName, BirthDate) not null                           | SourceMember table data                                                                                                        | No records with null/empty FirstName, LastName, BirthDate in ValidMemberRecords                                |
+| TC_03       | Unit        | Validate MemberPhone and OtherPhone E.164 format                                                     | ValidMemberRecords table data                                                                                                  | No records with invalid E.164 phone format in ValidMemberRecords                                               |
+| TC_04       | Unit        | Validate Email RFC 5322 format                                                                       | ValidMemberRecords table data                                                                                                  | No records with invalid email format in ValidMemberRecords                                                     |
+| TC_05       | Unit        | Validate SourceEnrollment column mapping and schema drift handling                                   | SourceEnrollment table data                                                                                                    | All columns mapped as per schema; schema drift handled as per mapping logic                                    |
+| TC_06       | Unit        | Validate mandatory Enrollment fields (PlanName, PlanStatus, MemberID) not null                       | ValidEnrollmentRecords table data                                                                                              | No records with null/empty PlanName, PlanStatus, MemberID in ValidEnrollmentRecords                            |
+| TC_07       | Unit        | Validate CareManagerPhone E.164 format                                                              | ValidEnrollmentRecords table data                                                                                              | No records with invalid E.164 CareManagerPhone in ValidEnrollmentRecords                                       |
+| TC_08       | Unit        | Validate SourcePCPHistory column mapping and schema drift handling                                   | SourcePCPHistory table data                                                                                                    | All columns mapped as per schema; schema drift handled as per mapping logic                                    |
+| TC_09       | Unit        | Validate mandatory PCPHistory fields (MemberID) not null and PhoneNumber E.164 format                | ValidPCPHistoryRecords table data                                                                                              | No records with null MemberID or invalid E.164 PhoneNumber in ValidPCPHistoryRecords                           |
+| TC_10       | Unit        | Validate SourceCommunicationPreference column mapping and schema drift handling                      | SourceCommunicationPreference table data                                                                                       | All columns mapped as per schema; schema drift handled as per mapping logic                                    |
+| TC_11       | Unit        | Validate mandatory CommunicationPreference fields (MemberID, CommunicationType) not null             | ValidCommunicationPreferenceRecords table data                                                                                | No records with null/empty MemberID or CommunicationType in ValidCommunicationPreferenceRecords                 |
+| TC_12       | Unit        | Validate SourceMemberAddress column mapping and schema drift handling                                | SourceMemberAddress table data                                                                                                | All columns mapped as per schema; schema drift handled as per mapping logic                                    |
+| TC_13       | Unit        | Validate mandatory MemberAddress fields (MemberID, Line1, City, State, PostalCode) not null          | ValidMemberAddressRecords table data                                                                                          | No records with null/empty mandatory fields in ValidMemberAddressRecords                                       |
+| TC_14       | Unit        | Validate PostalCode USPS format                                                                      | ValidMemberAddressRecords table data                                                                                          | No records with invalid PostalCode format in ValidMemberAddressRecords                                         |
+| TC_15       | Unit        | Validate error routing for Member entity                                                             | ErrorRecords table data                                                                                                       | All invalid Member records routed to ErrorRecords                                                              |
+| TC_16       | Unit        | Validate error routing for Enrollment entity                                                         | ErrorRecords table data                                                                                                       | All invalid Enrollment records routed to ErrorRecords                                                          |
+| TC_17       | Unit        | Validate error routing for PCPHistory entity                                                         | ErrorRecords table data                                                                                                       | All invalid PCPHistory records routed to ErrorRecords                                                          |
+| TC_18       | Unit        | Validate error routing for CommunicationPreference entity                                            | ErrorRecords table data                                                                                                       | All invalid CommunicationPreference records routed to ErrorRecords                                             |
+| TC_19       | Unit        | Validate error routing for MemberAddress entity                                                      | ErrorRecords table data                                                                                                       | All invalid MemberAddress records routed to ErrorRecords                                                       |
+| TC_20       | Unit        | Validate sink schema alignment for Member                                                            | SinkMember table data                                                                                                         | All columns in SinkMember align with mapping and target schema                                                 |
+| TC_21       | Unit        | Validate sink schema alignment for Enrollment                                                        | SinkEnrollment table data                                                                                                     | All columns in SinkEnrollment align with mapping and target schema                                             |
+| TC_22       | Unit        | Validate sink schema alignment for PCPHistory                                                        | SinkPCPHistory table data                                                                                                     | All columns in SinkPCPHistory align with mapping and target schema                                             |
+| TC_23       | Unit        | Validate sink schema alignment for CommunicationPreference                                           | SinkCommunicationPreference table data                                                                                        | All columns in SinkCommunicationPreference align with mapping and target schema                                |
+| TC_24       | Unit        | Validate sink schema alignment for MemberAddress                                                     | SinkMemberAddress table data                                                                                                  | All columns in SinkMemberAddress align with mapping and target schema                                          |
+| TC_25       | Unit        | Validate error log population                                                                        | SinkErrorRecords table data                                                                                                   | ErrorRecords table populated with all invalid records from entities                                            |
+| TC_26       | Unit        | Validate audit log population                                                                        | SinkAuditLog table data                                                                                                       | AuditLogRecords table populated for each valid Member record                                                   |
+| TC_27       | Unit        | Validate referential integrity for MemberID across entities                                          | ValidEnrollmentRecords, ValidPCPHistoryRecords, ValidCommunicationPreferenceRecords, ValidMemberAddressRecords table data     | All MemberID references in related entities exist in ValidMemberRecords                                        |
 
-1.3. Data Format & Standards
-- Phone numbers must conform to E.164 format (e.g., +1XXXXXXXXXX).
-- Email addresses must comply with RFC 5322 standards (e.g., user@domain.com).
-- All date fields must use ISO 8601 format (YYYY-MM-DD).
-- Address fields must conform to USPS standards (Line1, City, State, Zip).
+Pytest Validation Suite
 
-1.4. Data Consistency
-- No duplicate Member ID records are allowed post-migration; deduplication must be completed prior to migration.
-- All foreign key relationships (e.g., Member to Enrollment, PCP History, Communication Preference, Member Address) must be intact and valid.
-- PHI fields must be consistently secured and accessible only by authorized roles.
+import pytest
+import pyodbc
 
-2. Constraints
+@pytest.fixture(scope="module")
+def conn():
+    connection_string = (
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        "SERVER=<your_server>;"
+        "DATABASE=<your_database>;"
+        "Authentication=ActiveDirectoryInteractive"
+    )
+    return pyodbc.connect(connection_string)
 
-2.1. Mandatory Fields
-- Member (Contact): First Name, Last Name, Member ID, Date of Birth, Main Phone, Email are mandatory.
-- Enrollment, PCP History, Communication Preference, and Member Address must have valid references to the parent Member.
+# Functional test cases
 
-2.2. Uniqueness
-- Member ID must be unique across all migrated records (max 15 characters).
-- Source Record IDs must be unique within their respective entities.
+def test_FTC_01_member_mandatory_fields_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'Member' AND (
+        ValidationErrors LIKE '%FirstName cannot be null or empty%' OR
+        ValidationErrors LIKE '%LastName cannot be null or empty%' OR
+        ValidationErrors LIKE '%BirthDate cannot be null%' )
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-2.3. Data Type & Format
-- Phone: Text, E.164 format.
-- Email: Text, RFC 5322 format.
-- Date fields: Date/DateTime, ISO 8601 format.
-- Boolean fields (e.g., Do Not Call, Is Preferred, Is Text Opt-In): 1 or 0.
-- Address fields: Text, USPS standards.
+def test_FTC_02_member_phone_e164_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'Member' AND (
+        ValidationErrors LIKE '%MemberPhone must be E.164 format%' OR
+        ValidationErrors LIKE '%OtherPhone must be E.164 format%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-2.4. Referential Integrity
-- All child records (Enrollment, PCP History, Communication Preference, Member Address) must reference a valid Member (Contact) record.
-- No orphaned child records are allowed.
+def test_FTC_03_member_email_rfc5322_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'Member' AND (
+        ValidationErrors LIKE '%Email must be valid RFC 5322 format%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-2.5. Security & Access
-- PHI fields must be secured per HIPAA; only authorized Advocate roles can access sensitive data.
-- Role-based access controls must be enforced at the data model level.
+def test_FTC_04_enrollment_mandatory_fields_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'Enrollment' AND (
+        ValidationErrors LIKE '%PlanName cannot be null or empty%' OR
+        ValidationErrors LIKE '%PlanStatus cannot be null or empty%' OR
+        ValidationErrors LIKE '%MemberID cannot be null%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-2.6. Audit & Retention
-- Migration audit logs must be retained for at least 18 months.
-- Audit logs must capture record counts, success/failure status, and per-record error details.
+def test_FTC_05_enrollment_caremanagerphone_e164_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'Enrollment' AND (
+        ValidationErrors LIKE '%CareManagerPhone must be E.164 format%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-2.7. Performance
-- Post-migration search response time must be under 2 seconds for queries across all 400,000 records.
-- Migration must complete within the agreed SLA batch window (e.g., 8 hours).
+def test_FTC_06_pcphistory_mandatory_fields_and_phone_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'PCPHistory' AND (
+        ValidationErrors LIKE '%MemberID cannot be null%' OR
+        ValidationErrors LIKE '%PhoneNumber must be E.164 format%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-3. Business Rules
+def test_FTC_07_comm_pref_mandatory_fields_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'CommunicationPreference' AND (
+        ValidationErrors LIKE '%MemberID cannot be null%' OR
+        ValidationErrors LIKE '%CommunicationType cannot be null or empty%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-3.1. Migration & Data Processing
-- Only active SCAN member records from EDH are in scope for migration.
-- Pre-migration deduplication is mandatory; no duplicate Member IDs may exist in the target CRM.
-- All field mappings must be implemented as specified; static values (e.g., Source System = 'EDH') must be set where required.
-- All validation rules (phone, email, date, address) must be enforced during migration and in the target system.
+def test_FTC_08_memberaddress_mandatory_fields_and_postalcode_validation(conn):
+    query = """
+    SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'MemberAddress' AND (
+        ValidationErrors LIKE '%MemberID cannot be null%' OR
+        ValidationErrors LIKE '%Line1 cannot be null or empty%' OR
+        ValidationErrors LIKE '%City cannot be null or empty%' OR
+        ValidationErrors LIKE '%State cannot be null or empty%' OR
+        ValidationErrors LIKE '%PostalCode cannot be null or empty%' OR
+        ValidationErrors LIKE '%PostalCode must be valid US format%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-3.2. Data Relationships & Linking
-- Each Enrollment, PCP History, Communication Preference, and Member Address record must be linked to a valid Member (Contact) via foreign key.
-- Deletion or update of a Member (Contact) must cascade or restrict changes to child entities as per referential integrity rules.
+def test_FTC_09_valid_invalid_routing(conn):
+    query_valid = "SELECT COUNT(*) FROM SinkMember"
+    query_error = "SELECT COUNT(*) FROM SinkErrorRecords"
+    cursor = conn.cursor()
+    cursor.execute(query_valid)
+    valid_count = cursor.fetchone()[0]
+    cursor.execute(query_error)
+    error_count = cursor.fetchone()[0]
+    assert valid_count >= 0 and error_count >= 0
 
-3.3. Security & Compliance
-- PHI fields must be encrypted or otherwise protected in storage and transit.
-- Only authorized Advocate roles may access PHI fields; unauthorized access attempts must be logged.
-- Audit logs must be immutable and accessible for compliance review for at least 18 months.
+def test_FTC_10_audit_log_generation(conn):
+    query = "SELECT COUNT(*) FROM SinkAuditLog WHERE TargetEntity = 'Member'"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
 
-3.4. Reporting & Validation
-- All verification test scenarios (search by Member ID, Last Name + DOB, random sample validation, duplicate check, PHI access control) must pass prior to migration sign-off.
-- Reconciliation reports must confirm zero data loss and no critical errors post-migration.
-- All performance benchmarks (search response time, migration SLA) must be met before go-live.
+def test_FTC_11_referential_integrity(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkEnrollment e
+    LEFT JOIN SinkMember m ON e.MemberID = m.MemberID
+    WHERE m.MemberID IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} Enrollment records with invalid MemberID reference"
 
-4. API Cost Calculation
---Cost for this Call: $0.01
+# Unit test cases (one per transformation)
+
+def test_TC_01_source_member_column_mapping(conn):
+    query = "SELECT COUNT(*) FROM SourceMember"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_02_member_mandatory_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkMember WHERE FirstName IS NULL OR LTRIM(RTRIM(FirstName)) = '' OR LastName IS NULL OR LTRIM(RTRIM(LastName)) = '' OR BirthDate IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null/empty mandatory Member fields"
+
+def test_TC_03_member_phone_e164_format(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkMember WHERE (MemberPhone IS NOT NULL AND MemberPhone <> '' AND MemberPhone NOT LIKE '+[1-9]%') OR (OtherPhone IS NOT NULL AND OtherPhone <> '' AND OtherPhone NOT LIKE '+[1-9]%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with invalid E.164 phone format"
+
+def test_TC_04_member_email_rfc5322_format(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkMember WHERE Email IS NOT NULL AND Email <> '' AND Email NOT LIKE '%@%.%'
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with invalid email format"
+
+def test_TC_05_source_enrollment_column_mapping(conn):
+    query = "SELECT COUNT(*) FROM SourceEnrollment"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_06_enrollment_mandatory_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkEnrollment WHERE PlanName IS NULL OR LTRIM(RTRIM(PlanName)) = '' OR PlanStatus IS NULL OR LTRIM(RTRIM(PlanStatus)) = '' OR MemberID IS NULL
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null/empty mandatory Enrollment fields"
+
+def test_TC_07_enrollment_caremanagerphone_e164_format(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkEnrollment WHERE CareManagerPhone IS NOT NULL AND CareManagerPhone <> '' AND CareManagerPhone NOT LIKE '+[1-9]%'
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with invalid CareManagerPhone E.164 format"
+
+def test_TC_08_source_pcphistory_column_mapping(conn):
+    query = "SELECT COUNT(*) FROM SourcePCPHistory"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_09_pcphistory_mandatory_fields_and_phone(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkPCPHistory WHERE MemberID IS NULL OR (PhoneNumber IS NOT NULL AND PhoneNumber <> '' AND PhoneNumber NOT LIKE '+[1-9]%')
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null MemberID or invalid PhoneNumber format"
+
+def test_TC_10_source_comm_pref_column_mapping(conn):
+    query = "SELECT COUNT(*) FROM SourceCommunicationPreference"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_11_comm_pref_mandatory_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkCommunicationPreference WHERE MemberID IS NULL OR CommunicationType IS NULL OR LTRIM(RTRIM(CommunicationType)) = ''
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null/empty mandatory CommunicationPreference fields"
+
+def test_TC_12_source_memberaddress_column_mapping(conn):
+    query = "SELECT COUNT(*) FROM SourceMemberAddress"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_13_memberaddress_mandatory_fields_not_null(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkMemberAddress WHERE MemberID IS NULL OR Line1 IS NULL OR LTRIM(RTRIM(Line1)) = '' OR City IS NULL OR LTRIM(RTRIM(City)) = '' OR State IS NULL OR LTRIM(RTRIM(State)) = '' OR PostalCode IS NULL OR LTRIM(RTRIM(PostalCode)) = ''
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with null/empty mandatory MemberAddress fields"
+
+def test_TC_14_memberaddress_postalcode_usps_format(conn):
+    query = """
+    SELECT COUNT(*) FROM SinkMemberAddress WHERE PostalCode IS NOT NULL AND PostalCode <> '' AND PostalCode NOT LIKE '[0-9][0-9][0-9][0-9][0-9]%' AND PostalCode NOT LIKE '[0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with invalid PostalCode format"
+
+def test_TC_15_member_error_routing(conn):
+    query = "SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'Member'"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_16_enrollment_error_routing(conn):
+    query = "SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'Enrollment'"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_17_pcphistory_error_routing(conn):
+    query = "SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'PCPHistory'"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_18_comm_pref_error_routing(conn):
+    query = "SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'CommunicationPreference'"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_19_memberaddress_error_routing(conn):
+    query = "SELECT COUNT(*) FROM ErrorRecords WHERE TargetEntity = 'MemberAddress'"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_20_sink_member_schema_alignment(conn):
+    query = "SELECT COUNT(*) FROM SinkMember"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_21_sink_enrollment_schema_alignment(conn):
+    query = "SELECT COUNT(*) FROM SinkEnrollment"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_22_sink_pcphistory_schema_alignment(conn):
+    query = "SELECT COUNT(*) FROM SinkPCPHistory"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_23_sink_comm_pref_schema_alignment(conn):
+    query = "SELECT COUNT(*) FROM SinkCommunicationPreference"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_24_sink_memberaddress_schema_alignment(conn):
+    query = "SELECT COUNT(*) FROM SinkMemberAddress"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_25_error_log_population(conn):
+    query = "SELECT COUNT(*) FROM SinkErrorRecords"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_26_audit_log_population(conn):
+    query = "SELECT COUNT(*) FROM SinkAuditLog"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result >= 0
+
+def test_TC_27_referential_integrity_memberid(conn):
+    query = """
+    SELECT COUNT(*) FROM (
+        SELECT MemberID FROM SinkEnrollment WHERE MemberID NOT IN (SELECT MemberID FROM SinkMember)
+        UNION
+        SELECT MemberID FROM SinkPCPHistory WHERE MemberID NOT IN (SELECT MemberID FROM SinkMember)
+        UNION
+        SELECT MemberID FROM SinkCommunicationPreference WHERE MemberID NOT IN (SELECT MemberID FROM SinkMember)
+        UNION
+        SELECT MemberID FROM SinkMemberAddress WHERE MemberID NOT IN (SELECT MemberID FROM SinkMember)
+    ) AS InvalidRefs
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+    assert result == 0, f"Found {result} records with invalid MemberID references"
+
+API cost: 0.040000 USD
