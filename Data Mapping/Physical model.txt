@@ -1,0 +1,95 @@
+-- Table: Member
+CREATE TABLE dbo.Member (
+    MemberId INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+    FirstName VARCHAR(50),
+    MiddleName VARCHAR(50),
+    LastName VARCHAR(50),
+    BirthDate DATETIME,
+    Gender VARCHAR(10),
+    MaritalStatus VARCHAR(20),
+    MemberPhone VARCHAR(20),
+    OtherPhone VARCHAR(20),
+    Email VARCHAR(100),
+    SpokenLanguage VARCHAR(30),
+    WrittenLanguage VARCHAR(30),
+    DoNotCall VARCHAR(5),
+    SourceSystem VARCHAR(30)
+);
+
+-- Table: Enrollment
+CREATE TABLE dbo.Enrollment (
+    EnrollmentId INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+    PlanName VARCHAR(100),
+    PlanStatus VARCHAR(20),
+    PlanEffectiveDate DATETIME,
+    CareManagerProgram VARCHAR(100),
+    CareManagerName VARCHAR(100),
+    CareManagerPhone VARCHAR(20),
+    SNPPlandiagnosisverificationduedate DATETIME,
+    SSBCIScreeningStatusDate DATETIME,
+    PlanStatusConfirmation VARCHAR(20),
+    SourceSystem VARCHAR(30)
+);
+
+-- Table: PCPHistory
+CREATE TABLE dbo.PCPHistory (
+    PCPHistoryId INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+    PCPID VARCHAR(30),
+    PCPName VARCHAR(100),
+    Specialty VARCHAR(50),
+    PMG VARCHAR(100),
+    PhoneNumber VARCHAR(20),
+    PCPEffectiveDate DATETIME,
+    PCPEffectiveEndDate DATETIME,
+    PCPAddressLine1 VARCHAR(100),
+    PCPAddressLine2 VARCHAR(100),
+    PCPAddressCity VARCHAR(50),
+    PCPAddressState VARCHAR(50),
+    PCPAddressPostalCode VARCHAR(20),
+    PCPAddressSuffix VARCHAR(20),
+    PCPAutoAssigned VARCHAR(5),
+    CurrentPMGId VARCHAR(30),
+    CurrentNetworkPMG VARCHAR(100),
+    SourceSystem VARCHAR(30)
+);
+
+-- Table: CommunicationPreference
+CREATE TABLE dbo.CommunicationPreference (
+    CommunicationPreferenceId INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+    CommunicationType VARCHAR(50),
+    CommunicationCategory VARCHAR(50),
+    CommunicationSubCategoryCode VARCHAR(20),
+    DeliveryMethodName VARCHAR(50),
+    Preferred VARCHAR(5),
+    TextOptIn VARCHAR(5),
+    SourceSystem VARCHAR(30)
+);
+
+-- Table: MemberAddress
+CREATE TABLE dbo.MemberAddress (
+    MemberAddressId INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+    Description VARCHAR(100),
+    Line1 VARCHAR(100),
+    Line2 VARCHAR(100),
+    City VARCHAR(50),
+    State VARCHAR(50),
+    PostalCode VARCHAR(20),
+    County VARCHAR(50),
+    PeriodStart DATETIME,
+    PeriodEnd DATETIME,
+    SourceSystem VARCHAR(30)
+);
+
+-- Table: AuditLog
+CREATE TABLE dbo.AuditLog (
+    LogEntryKey VARCHAR(50) PRIMARY KEY NOT NULL,
+    TargetEntity VARCHAR(50),
+    LoadTimestamp DATETIME,
+    ProcessName VARCHAR(50),
+    CompletionTimestamp DATETIME,
+    OperationOutcome VARCHAR(20)
+);
+
+2. API Cost:
+
+* apiCost: $0.02
