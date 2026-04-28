@@ -12,71 +12,67 @@ Azure Dataflow Validation Report
 
 1. Summary
 
-Dataflow Name: Manual_DF_CLIENT_BRONZE_TO_SILVER
+Dataflow Name: MemberDataIntegrationFlow
 
-Overall Quality Score (%): 91.43
+Overall Quality Score (%): 60
 
 Justification:
-- All core logical blocks (Source, Join, Derived Columns, Data Quality Checks, Conditional Split, Sink, Error Handling) are present and implemented with strong validation and transformation logic.
-- Data quality validation is comprehensive, covering all key business fields with explicit iif-based rules.
-- The process flow follows the expected pattern and is logically consistent.
-- Minor gaps identified in error sink field mapping and lack of advanced error enrichment.
-- Schema drift is allowed, which is flexible but may allow unexpected fields if not controlled at sink.
-- No major risks of data loss or duplication detected; join logic is clear and appropriate.
+- Multiple source datasets with defined schemas, but allowSchemaDrift enabled and validateSchema disabled (risk of schema inconsistency)
+- No join transformations present, only splits; possible missing integration logic
+- Conditional splits route all records (true condition), lacking explicit validation rules or business logic
+- Derived columns only present for AuditLog, no business derivations in main flows
+- Sinks configured for each entity, but error handling only via 'stopOnFirstError', no dedicated error sinks for data errors
+- No explicit data quality checks, iif conditions, or rule coverage in splits
+- Process flow is linear but lacks validation and error routing
+- Business rules and validation logic largely missing, only operational metadata in AuditLog
+- Risks of data inconsistency, weak validation, and lack of error capture
 
 2. Logical Block Validation
 
 Logical Block	Status	Observations
-Source	Valid	- Two sources defined with explicit schema, allowSchemaDrift: true, validateSchema: false.
-		- Data types appropriate, schema covers all business fields.
-Join	Valid	- Left join on ClientFullName == SubscriberName, matchType: exact, no ignoreSpaces.
-		- Correct for use case; no risk of data loss as left join preserves CRM clients.
-Derived Columns	Valid	- Comprehensive field mapping; business logic for ClientStatus (Active/Inactive), correct field renaming.
-Data Quality Checks	Valid	- All critical fields validated: presence, enums, date logic, null/blank checks, error concatenation.
-Conditional Split	Valid	- Correctly splits records based on ValidationErrors (valid vs error records).
-Sink	Valid	- Valid sink for both TargetClient and Error; schema defined, all required fields present for TargetClient.
-Error Handling	Partially Valid	- Error sink present, but error schema is generic and not fully enriched with source context (e.g., missing row-level data, original source keys).
+Source	Valid	Schemas defined, allowSchemaDrift: true (risk), validateSchema: false (risk), fields appropriate
+Join	Missing	No joins present, possible missing business integration logic
+Derived Columns	Partially Valid	Only AuditLog has derivations; business columns not derived in main flows
+Data Quality Checks	Missing	No explicit data quality checks, iif, or validation expressions present
+Conditional Split	Invalid	All splits use 'true()', no separation of valid/error records, lacks business logic
+Sink	Valid	Sinks configured, schema matches, insertable, errorHandlingOption: stopOnFirstError
+Error Handling	Risky	No dedicated error sinks for invalid records, only operational error handling; no error schema
 
 3. Process Flow Assessment
 
-Status:
-Fully Correct
-
+Status: Broken / Incomplete
 Observations:
-- Flow follows: Source → Join → Derived Columns → Data Quality Checks → Conditional Split → Sink.
-- No missing steps, all routing conditions explicit.
-- Valid and error records are properly separated and routed to respective sinks.
+- Expected flow (Source → Join → Derived Columns → Data Quality Checks → Conditional Split → Sink) not followed
+- No joins, derived columns missing in main flows, splits lack validation logic
+- Error routing for invalid records is not implemented
 
 4. Business Rule Validation
 
 Fully Covered:
-- ClientName presence
-- IndustrySector enum
-- HeadquartersCountry (2-char code)
-- RevenueRange enum
-- EmployeeCountRange enum
-- RelationshipType enum
-- ContractStartDate presence
-- ContractEndDate > ContractStartDate
-- ClientStatus (Active/Inactive)
-- ValidationErrors concatenation logic
+- AuditLog operational metadata derivation
 
 Partially Covered:
-- Error sink does not capture all possible error context (e.g., source record ID, full error details)
+- Source schema definition
 
 Missing / Needs Review:
-- No explicit duplicate detection (not required, but should be confirmed)
-- No advanced error enrichment (e.g., source record lineage)
+- All business validation logic (iif, enum checks, NULL/blank handling, date validation, error message construction)
+- Conditional split routing by data quality
+- Error record capture and schema
 
 5. Risks & Issues
 
 | Item | Description | Severity | Type | Recommendation |
-|------|-------------|----------|------|----------------|
-| 1 | Error sink schema is minimal; lacks source record context (e.g., CRMClientID, SubscriptionID) | Medium | Validation | Enrich error sink with more source fields for better traceability |
-| 2 | allowSchemaDrift: true on all blocks | Medium | Schema | Review if schema drift is required at sink; restrict if possible |
-| 3 | validateSchema: false on all blocks | Low | Schema | Consider enabling schema validation at sink for production |
-| 4 | No duplicate record check | Low | Logic | Confirm if deduplication is handled upstream or not required |
+|------|-------------|----------|------|---------------|
+| 1 | allowSchemaDrift enabled on all sources/sinks | Medium | Schema | Justify or restrict drift, enable validateSchema |
+| 2 | validateSchema disabled everywhere | High | Schema | Enable schema validation for production |
+| 3 | No join transformations | High | Logic | Add joins if business integration needed |
+| 4 | Conditional splits with 'true()' only | High | Logic | Add business validation conditions to splits |
+| 5 | No data quality checks or iif expressions | High | Validation | Add explicit validation rules |
+| 6 | No error handling for invalid records | High | Error Handling | Implement error sinks and error schema |
+| 7 | No business rule enforcement | High | Validation | Add business rule logic (enum, NULL, date, etc.) |
+| 8 | Sinks use stopOnFirstError only | Medium | Error Handling | Use error sinks for granular error capture |
+| 9 | Derived columns only for AuditLog | Medium | Logic | Add business derivations as needed |
 
 6. API Cost
 
-API cost: 0.00018000 USD
+API cost: 0.00012000 USD
