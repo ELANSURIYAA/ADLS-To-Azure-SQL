@@ -1,0 +1,86 @@
+1. Data Expectations
+
+1.1. Data Completeness
+- All active member records (~400,000) from the source system (EDH) must be migrated to the target system (Microsoft Dataverse CRM).
+- Each member record must include all mandatory demographic, enrollment, provider, communication preference, and address data as defined in the entity attributes.
+- All child entities (Enrollment, PCP History, Communication Preference, Member Address) must be present for each member as per source data.
+
+1.2. Data Accuracy
+- Member ID and all reference keys must accurately link related records across entities.
+- Data values (e.g., Plan Status, Effective Dates, Communication Methods) must match the source system values without transformation errors.
+- Validation Pass Rate must be 100% (i.e., all records must pass validation rules).
+
+1.3. Data Format
+- Dates must be in a consistent, valid format (e.g., YYYY-MM-DD).
+- Phone numbers and email addresses must adhere to standard formats.
+- Static values (e.g., Source System = 'EDH') must be present and correct in all records.
+
+1.4. Data Consistency
+- No duplicate Member IDs are allowed post-migration.
+- Referential integrity must be maintained between parent (Member) and child entities.
+- All records must be traceable via Source Record ID.
+
+2. Constraints
+
+2.1. Mandatory Fields
+- Member: Member ID, First Name, Last Name, Date of Birth, Source System, Record ID.
+- Enrollment: Plan ID, Patient Identifier, Plan Status, Plan Start Date, Source System, Record ID.
+- PCP History: PCP ID, Patient, Effective Date, Source System, Record ID.
+- Communication Preference: Member, Communication Method, Category, Source System, Source Record ID.
+- Member Address: Contact (Lookup), Address Type, Address Line 1, City, State/Province, Postal Code, Source System, Source Record ID.
+
+2.2. Uniqueness
+- Member ID must be unique across all Member records.
+- Plan ID must be unique within the context of a Member.
+- PCP ID must be unique within the context of a Member's PCP History.
+- Source Record ID must be unique within each entity for traceability.
+
+2.3. Data Type Limitations
+- Dates must be valid date types.
+- Phone numbers must be string values in a valid phone format.
+- Email must be a valid email address format.
+- Boolean fields (e.g., Do Not Call, Is Preferred, Is Text Opt-In, Auto Assigned) must be true/false.
+
+2.4. Dependencies and Referential Integrity
+- All child entities must reference a valid Member (Contact) via Member ID or equivalent foreign key.
+- Deletion or update of a Member must cascade or restrict appropriately in child entities to maintain integrity.
+
+2.5. Other Constraints
+- Search response time for member queries must be less than 2 seconds for up to 400,000 records.
+- Audit logs must be retained for at least 18 months.
+- Migration must complete within the SLA batch window (e.g., 8 hours).
+
+3. Business Rules
+
+3.1. Migration and Validation
+- All active members in the source must be migrated; Migration Completeness Rate must be 100%.
+- Data Loss Rate must be 0%; no records should be lost during migration.
+- Duplicate Member ID Rate must be 0% after deduplication.
+- All migrated records must pass validation rules (Validation Pass Rate = 100%).
+
+3.2. Data Relationships
+- Each Member can have multiple Enrollments, PCP History entries, Communication Preferences, and Addresses (One-to-Many relationships).
+- Child records must not exist without a valid parent Member record.
+
+3.3. Static and Derived Values
+- Source System must always be set to 'EDH' for all records.
+- Plan Type, Context Type, Plan Description, and Plan Intent may be static values as per source mapping.
+
+3.4. Communication Preferences
+- Only one Communication Preference per Category/Method can be marked as 'Is Preferred' for a Member.
+- If 'Is Text Opt-In' is true, a valid phone number must be present for the Member.
+
+3.5. PCP History
+- Only one PCP History entry can be current (i.e., with no End Date or with the latest Effective Date) for a Member at any given time.
+- If 'Auto Assigned' is true, the assignment must be flagged accordingly.
+
+3.6. Address Validity
+- Member Address records must have a valid Period Start date; Period End is optional but, if present, must be after Period Start.
+- Only one address of each Address Type can be current (i.e., with no Period End or with the latest Period Start) for a Member.
+
+3.7. Audit and Traceability
+- All records must include Source Record ID for audit purposes.
+- Audit logs must be retained for at least 18 months to meet compliance.
+
+4. API Cost Calculation
+--Cost for this Call: $0.01
