@@ -1,85 +1,79 @@
-1. Overview
+1. Data Expectations
 
-This data mapping document defines the field-level transformation and migration logic for moving active member data from the Enterprise Data Hub (EDH) to the target SQL schema for Microsoft Dataverse CRM. The mapping ensures strict data consistency, format standardization (E.164 for phone, RFC 5322 for email, ISO 8601 for dates, USPS for addresses), and type alignment between source and target systems. Key considerations include enforcing referential integrity, deduplication of Member IDs, and compliance with HIPAA and auditability requirements. Business rules and constraints such as mandatory fields, uniqueness, and data validation are actively applied to all mappings, shaping transformation logic and ensuring no data loss or orphaned records. All mappings are grounded in the provided DDLs, sample data, and explicit constraints, with no omissions or assumptions.
+1.1. Data Completeness
+- All ~400,000 active SCAN member records from the EDH source must be migrated to Microsoft Dataverse CRM with zero data loss.
+- Each Member (Contact) record must have all mandatory demographic fields populated: First Name, Last Name, Member ID, Date of Birth, Main Phone, and Email.
+- All related Enrollment (Care Plan), PCP History, Communication Preference, and Member Address records must be present and correctly linked to their parent Member.
 
-2. Data Mapping for Dimension Tables
+1.2. Data Accuracy
+- All migrated data must match the source EDH data with no discrepancies, as validated by reconciliation reports and random sample checks.
+- All verification test scenarios (e.g., search by Member ID, Last Name + DOB) must return correct and matching records.
 
-| Target Table              | Target Field                  | Source Table              | Source Field                  | Transformation Rule                                                                                                 |
-|--------------------------|-------------------------------|--------------------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| Member                   | MemberId                      | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
-| Member                   | FirstName                     | Member                   | FirstName                     | None                                                                                                                |
-| Member                   | MiddleName                    | Member                   | MiddleName                    | None                                                                                                                |
-| Member                   | LastName                      | Member                   | LastName                      | None                                                                                                                |
-| Member                   | BirthDate                     | Member                   | BirthDate                     | Standardize Format: Source BirthDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| Member                   | Gender                        | Member                   | Gender                        | None                                                                                                                |
-| Member                   | MaritalStatus                 | Member                   | MaritalStatus                 | None                                                                                                                |
-| Member                   | MemberPhone                   | Member                   | MemberPhone                   | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
-| Member                   | OtherPhone                    | Member                   | OtherPhone                    | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
-| Member                   | Email                         | Member                   | Email                         | Standardize Format: RFC 5322 email format | Constraint Applied: Email must comply with RFC 5322                           |
-| Member                   | SpokenLanguage                | Member                   | SpokenLanguage                | None                                                                                                                |
-| Member                   | WrittenLanguage               | Member                   | WrittenLanguage               | None                                                                                                                |
-| Member                   | DoNotCall                     | Member                   | DoNotCall                     | None                                                                                                                |
-| Member                   | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
-| Enrollment               | EnrollmentId                  | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
-| Enrollment               | PlanID                        | Enrollment               | PlanID                        | None                                                                                                                |
-| Enrollment               | PlanName                      | Enrollment               | PlanName                      | None                                                                                                                |
-| Enrollment               | PlanStatus                    | Enrollment               | PlanStatus                    | None                                                                                                                |
-| Enrollment               | PlanEffectiveDate             | Enrollment               | PlanEffectiveDate             | Standardize Format: Source PlanEffectiveDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| Enrollment               | CareManagerProgram            | Enrollment               | CareManagerProgram            | None                                                                                                                |
-| Enrollment               | CareManagerName               | Enrollment               | CareManagerName               | None                                                                                                                |
-| Enrollment               | CareManagerPhone              | Enrollment               | CareManagerPhone              | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
-| Enrollment               | SNPPlandiagnosisverificationduedate | Enrollment        | SNPPlandiagnosisverificationduedate | Standardize Format: Source SNPPlandiagnosisverificationduedate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| Enrollment               | SSBCIScreeningStatusDate      | Enrollment               | SSBCIScreeningStatusDate      | Standardize Format: Source SSBCIScreeningStatusDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| Enrollment               | PlanStatusConfirmation        | Enrollment               | PlanStatusConfirmation        | None                                                                                                                |
-| Enrollment               | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
-| Enrollment               | MemberId                      | Enrollment               | EDHMemberId                   | Lookup/Reference: Map Enrollment.EDHMemberId to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
-| PCPHistory               | PCPHistoryId                  | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
-| PCPHistory               | PCPID                         | PCPHistory               | PCPID                         | None                                                                                                                |
-| PCPHistory               | PCPName                       | PCPHistory               | PCPName                       | None                                                                                                                |
-| PCPHistory               | Specialty                     | PCPHistory               | Specialty                     | None                                                                                                                |
-| PCPHistory               | PMG                           | PCPHistory               | PMG                           | None                                                                                                                |
-| PCPHistory               | PhoneNumber                   | PCPHistory               | PhoneNumber                   | Standardize Format: E.164 phone format | Constraint Applied: Phone numbers must conform to E.164 format                 |
-| PCPHistory               | PCPEffectiveDate              | PCPHistory               | PCPEffectiveDate              | Standardize Format: Source PCPEffectiveDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| PCPHistory               | PCPEffectiveEndDate           | PCPHistory               | PCPEffectiveEndDate           | Standardize Format: Source PCPEffectiveEndDate to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| PCPHistory               | PCPAddressLine1               | PCPHistory               | PCPAddressLine1               | None                                                                                                                |
-| PCPHistory               | PCPAddressLine2               | PCPHistory               | PCPAddressLine2               | None                                                                                                                |
-| PCPHistory               | PCPAddressCity                | PCPHistory               | PCPAddressCity                | None                                                                                                                |
-| PCPHistory               | PCPAddressState               | PCPHistory               | PCPAddressState               | None                                                                                                                |
-| PCPHistory               | PCPAddressPostalCode          | PCPHistory               | PCPAddressPostalCode          | None                                                                                                                |
-| PCPHistory               | PCPAddressSuffix              | PCPHistory               | PCPAddressSuffix              | None                                                                                                                |
-| PCPHistory               | PCPAutoAssigned               | PCPHistory               | PCPAutoAssigned               | None                                                                                                                |
-| PCPHistory               | CurrentPMGId                  | PCPHistory               | CurrentPMGId                  | None                                                                                                                |
-| PCPHistory               | CurrentNetworkPMG             | PCPHistory               | CurrentNetworkPMG              | None                                                                                                                |
-| PCPHistory               | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
-| PCPHistory               | MemberId                      | PCPHistory               | EDHMemberId                   | Lookup/Reference: Map PCPHistory.EDHMemberId to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
-| CommunicationPreference  | CommunicationPreferenceId     | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
-| CommunicationPreference  | CommunicationType             | CommunicationPreference  | CommunicationType             | None                                                                                                                |
-| CommunicationPreference  | CommunicationCategory         | CommunicationPreference  | CommunicationCategory         | None                                                                                                                |
-| CommunicationPreference  | CommunicationSubCategoryCode  | CommunicationPreference  | CommunicationSubCategoryCode  | None                                                                                                                |
-| CommunicationPreference  | DeliveryMethodName            | CommunicationPreference  | DeliveryMethodName            | None                                                                                                                |
-| CommunicationPreference  | Preferred                     | CommunicationPreference  | Preferred                     | None                                                                                                                |
-| CommunicationPreference  | TextOptIn                     | CommunicationPreference  | TextOptIn                     | None                                                                                                                |
-| CommunicationPreference  | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
-| CommunicationPreference  | MemberId                      | CommunicationPreference  | EDHMemberID                   | Lookup/Reference: Map CommunicationPreference.EDHMemberID to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
-| MemberAddress            | MemberAddressId               | N/A                      | N/A                           | System Generated: Identity (auto-increment primary key)                                                             |
-| MemberAddress            | Description                   | MemberAddress            | Description                   | None                                                                                                                |
-| MemberAddress            | Line1                         | MemberAddress            | Line1                         | None                                                                                                                |
-| MemberAddress            | Line2                         | MemberAddress            | Line2                         | None                                                                                                                |
-| MemberAddress            | City                          | MemberAddress            | City                          | None                                                                                                                |
-| MemberAddress            | State                         | MemberAddress            | State                         | None                                                                                                                |
-| MemberAddress            | PostalCode                    | MemberAddress            | PostalCode                    | None                                                                                                                |
-| MemberAddress            | County                        | MemberAddress            | County                        | None                                                                                                                |
-| MemberAddress            | PeriodStart                   | MemberAddress            | PeriodStart                   | Standardize Format: Source PeriodStart to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| MemberAddress            | PeriodEnd                     | MemberAddress            | PeriodEnd                     | Standardize Format: Source PeriodEnd to ISO 8601 (YYYY-MM-DD) | Constraint Applied: All date fields must use ISO 8601 format |
-| MemberAddress            | SourceSystem                  | N/A                      | N/A                           | Default Value: 'EDH' | Constraint Applied: Static field set for all migrated records                    |
-| MemberAddress            | MemberId                      | MemberAddress            | EDHMemberId                   | Lookup/Reference: Map MemberAddress.EDHMemberId to Member.MemberId (foreign key) | Constraint Applied: Referential integrity enforced |
-| AuditLog                 | LogEntryKey                   | N/A                      | N/A                           | System Generated: Unique log entry identifier                                                                        |
-| AuditLog                 | TargetEntityName              | N/A                      | N/A                           | Derived: Name of the entity being loaded                                                                             |
-| AuditLog                 | LoadTimestamp                 | N/A                      | N/A                           | System Generated: Timestamp when the load started                                                                    |
-| AuditLog                 | PipelineName                  | N/A                      | N/A                           | Derived: Name of the pipeline or process                                                                             |
-| AuditLog                 | CompletionTimestamp           | N/A                      | N/A                           | System Generated: Timestamp when processing completed                                                                |
-| AuditLog                 | OperationOutcome              | N/A                      | N/A                           | Derived: Outcome of the operation (success/failure)                                                                  |
+1.3. Data Format & Standards
+- Phone numbers must conform to E.164 format (e.g., +1XXXXXXXXXX).
+- Email addresses must comply with RFC 5322 standards (e.g., user@domain.com).
+- All date fields must use ISO 8601 format (YYYY-MM-DD).
+- Address fields must conform to USPS standards (Line1, City, State, Zip).
 
-3. API Cost
+1.4. Data Consistency
+- No duplicate Member ID records are allowed post-migration; deduplication must be completed prior to migration.
+- All foreign key relationships (e.g., Member to Enrollment, PCP History, Communication Preference, Member Address) must be intact and valid.
+- PHI fields must be consistently secured and accessible only by authorized roles.
 
-apiCost: 0.02
+2. Constraints
+
+2.1. Mandatory Fields
+- Member (Contact): First Name, Last Name, Member ID, Date of Birth, Main Phone, Email are mandatory.
+- Enrollment, PCP History, Communication Preference, and Member Address must have valid references to the parent Member.
+
+2.2. Uniqueness
+- Member ID must be unique across all migrated records (max 15 characters).
+- Source Record IDs must be unique within their respective entities.
+
+2.3. Data Type & Format
+- Phone: Text, E.164 format.
+- Email: Text, RFC 5322 format.
+- Date fields: Date/DateTime, ISO 8601 format.
+- Boolean fields (e.g., Do Not Call, Is Preferred, Is Text Opt-In): 1 or 0.
+- Address fields: Text, USPS standards.
+
+2.4. Referential Integrity
+- All child records (Enrollment, PCP History, Communication Preference, Member Address) must reference a valid Member (Contact) record.
+- No orphaned child records are allowed.
+
+2.5. Security & Access
+- PHI fields must be secured per HIPAA; only authorized Advocate roles can access sensitive data.
+- Role-based access controls must be enforced at the data model level.
+
+2.6. Audit & Retention
+- Migration audit logs must be retained for at least 18 months.
+- Audit logs must capture record counts, success/failure status, and per-record error details.
+
+2.7. Performance
+- Post-migration search response time must be under 2 seconds for queries across all 400,000 records.
+- Migration must complete within the agreed SLA batch window (e.g., 8 hours).
+
+3. Business Rules
+
+3.1. Migration & Data Processing
+- Only active SCAN member records from EDH are in scope for migration.
+- Pre-migration deduplication is mandatory; no duplicate Member IDs may exist in the target CRM.
+- All field mappings must be implemented as specified; static values (e.g., Source System = 'EDH') must be set where required.
+- All validation rules (phone, email, date, address) must be enforced during migration and in the target system.
+
+3.2. Data Relationships & Linking
+- Each Enrollment, PCP History, Communication Preference, and Member Address record must be linked to a valid Member (Contact) via foreign key.
+- Deletion or update of a Member (Contact) must cascade or restrict changes to child entities as per referential integrity rules.
+
+3.3. Security & Compliance
+- PHI fields must be encrypted or otherwise protected in storage and transit.
+- Only authorized Advocate roles may access PHI fields; unauthorized access attempts must be logged.
+- Audit logs must be immutable and accessible for compliance review for at least 18 months.
+
+3.4. Reporting & Validation
+- All verification test scenarios (search by Member ID, Last Name + DOB, random sample validation, duplicate check, PHI access control) must pass prior to migration sign-off.
+- Reconciliation reports must confirm zero data loss and no critical errors post-migration.
+- All performance benchmarks (search response time, migration SLA) must be met before go-live.
+
+4. API Cost Calculation
+--Cost for this Call: $0.01
